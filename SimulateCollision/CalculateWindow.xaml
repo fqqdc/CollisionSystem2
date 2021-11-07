@@ -1,0 +1,18 @@
+﻿<Window x:Class="SimulateCollision.CalculateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SimulateCollision"
+        mc:Ignorable="d"
+        Title="演算设置" Height="450" Width="800" >
+    <StackPanel Margin="15">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5">
+            <Label>演算时间：</Label>
+            <TextBox VerticalContentAlignment="Center" Text="5" Width="50" x:Name="txtSimTime"/>
+            <Label>0.1~999</Label>
+            <Label>[5]</Label>
+        </StackPanel>
+        <Button x:Name="btnSubmit" Content="确定" Width="100" Click="btnSubmit_Click" Margin="5" Padding="5" IsDefault="True"/>
+    </StackPanel>
+</Window>

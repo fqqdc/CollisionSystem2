@@ -1,0 +1,6 @@
+ConsoleApp*
+*/bin
+*/obj
+*/Properties/PublishProfiles
+.vs
+*/*.csproj.user

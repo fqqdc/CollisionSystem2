@@ -1,0 +1,33 @@
+﻿<Window x:Class="SimulateCollision.CollisionBoxWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SimulateCollision"
+        mc:Ignorable="d"
+        Title="碰撞模拟 (点击鼠标右键使用菜单进行操作)" Width="1600" Height="900" SizeChanged="Window_SizeChanged" >
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem x:Name="miGenerate" Header="生成粒子" Click="btnGenerate_Click" />
+            <MenuItem x:Name="miSave" Header="保存当前" Click="btnSave_Click" />
+            <MenuItem x:Name="miLoad" Header="载入" Click="btnLoad_Click" />
+            <Separator />
+            <MenuItem x:Name="miCalculate" Header="碰撞演算" Click="btnCalculate_Click" />
+            <Separator />
+            <MenuItem x:Name="miPlay" Header="从头播放" Click="btnPlay_Click" />
+            <MenuItem x:Name="miStop" Header="⏹️停止" Click="btnStop_Click" />
+            <MenuItem x:Name="miReset" Header="⏮️重置" Click="btnReset_Click" />
+            <MenuItem x:Name="miResetEnd" Header="⏭️重置" Click="btnResetEnd_Click" />
+        </ContextMenu>
+    </Window.ContextMenu>
+    <Grid>
+        <Grid VerticalAlignment="Top" HorizontalAlignment="Left" Visibility="Collapsed" >
+            <StackPanel>
+            </StackPanel>
+        </Grid>
+        <Border BorderBrush="Red" BorderThickness="1" Margin="10">
+            <Canvas x:Name="mainPanel">
+            </Canvas>
+        </Border>
+    </Grid>
+</Window>

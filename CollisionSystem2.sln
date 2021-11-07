@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31424.327
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimulateCollision", "SimulateCollision\SimulateCollision.csproj", "{65D8D10E-155D-4208-9F78-488039782187}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{65D8D10E-155D-4208-9F78-488039782187}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Debug|x64.Build.0 = Debug|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Release|x64.ActiveCfg = Release|Any CPU
+		{65D8D10E-155D-4208-9F78-488039782187}.Release|x64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FED6E71C-8187-4BB9-A089-18DA8656C754}
+	EndGlobalSection
+EndGlobal
