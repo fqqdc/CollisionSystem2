@@ -288,14 +288,15 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            CollisionCoreSystemIndex ccs = new(lstParticle.ToArray(), panelWidth, panelHeight, simTime);
-            int max = 0;
+            CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), panelWidth, panelHeight);
+            int n,max = 0;
             await Task.Run(() =>
             {
                 int count = 0;
-
-                int n = ccs.NextStep();
-                while (n != 0)
+                n = ccs.QueueLength;
+                double ccsTime = ccs.NextStep();
+                
+                while (ccsTime < simTime)
                 {
                     count += 1;
                     if (count % 100 == 0)
@@ -307,9 +308,11 @@ namespace SimulateCollision
                     }
 
                     max = Math.Max(max, n);
-                    n = ccs.NextStep();
+                    n = ccs.QueueLength;
+                    ccsTime = ccs.NextStep();
                 }
 
+                ccs.SnapshotAll();
                 Dispatcher.Invoke(() =>
                 {
                     Title = $"演算进度：{ccs.SystemTime,6:F4} / {simTime} | 队列长度：{n,7} / {max,7}";

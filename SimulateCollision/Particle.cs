@@ -13,7 +13,7 @@ namespace SimulateCollision
      */
     public class Particle
     {
-        private const double INFINITY = Double.PositiveInfinity;
+        public const double INFINITY = Double.PositiveInfinity;
 
         /**
          * position(位置)
