@@ -54,13 +54,13 @@ namespace SimulateCollision
             this.Count = 0;
         }
 
-        public static Particle CreateParticle()
+        public static ParticleF CreateParticle()
         {
             Random r = new();
-            return new(r.NextDouble(), r.NextDouble(), r.NextDouble() * 0.01 - 0.005, r.NextDouble() * 0.01 - 0.005, 0.02, 0.5);
+            return new(r.NextSingle(), r.NextSingle(), r.NextSingle() * 0.01f - 0.005f, r.NextSingle() * 0.01f - 0.005f, 0.02f, 0.5f);
         }
 
-        public static Particle CreateParticleByInt()
+        public static ParticleF CreateParticleByInt()
         {
             Random r = new();
             return new(r.Next(1, 101), r.Next(1, 101), r.Next(1, 11) - 5, r.Next(1, 11) - 5, 2, 1);
