@@ -32,7 +32,6 @@ namespace SimulateCollision
             }
         }
 
-
         public CollisionCoreSystemIndexUnlimit(Particle[] particles, double width, double height)
         {
             this.particles = particles;

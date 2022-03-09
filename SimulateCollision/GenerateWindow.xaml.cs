@@ -60,11 +60,6 @@ namespace SimulateCollision
             set { boxMargin = value; }
         }
 
-
-
-
-
-
         public GenerateWindow()
         {
             InitializeComponent();

@@ -336,21 +336,21 @@ namespace SimulateCollision
             double panelHeight = mainPanel.ActualHeight;
 
             CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), panelWidth, panelHeight);
-            int n, max = 0;
+            int n, max = 0, count = 0;
+            Stopwatch sw = Stopwatch.StartNew();
             await Task.Run(() =>
             {
-                int count = 0;
                 n = ccs.QueueLength;
                 double ccsTime = ccs.NextStep();
 
                 while (ccsTime < simTime)
                 {
                     count += 1;
-                    if (count % 100 == 0)
+                    if (count % 1000 == 0)
                     {
                         Dispatcher.Invoke(() =>
                         {
-                            Title = $"演算进度：{ccs.SystemTime,6:F4} / {simTime} | 队列长度：{n,7} / {max,7}";
+                            Title = $"进度：{ccs.SystemTime,6:F4} / {simTime} | 队列：{n,7} / {max,7} | 事件：{(int)(count / sw.Elapsed.TotalSeconds),7} / {count,7}";
                         });
                     }
 
@@ -360,10 +360,6 @@ namespace SimulateCollision
                 }
 
                 ccs.SnapshotAll();
-                Dispatcher.Invoke(() =>
-                {
-                    Title = $"演算进度：{ccs.SystemTime,6:F4} / {simTime} | 队列长度：{n,7} / {max,7}";
-                });
             });
 
             this.snapshot = ccs.SystemSnapshot;
@@ -371,9 +367,8 @@ namespace SimulateCollision
             Redraw();
             SetUIItem(true);
 
-            Debug.WriteLine($"max:{max}");
-            MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
-            Title = $"模拟 {lstParticle.Count} 个粒子的碰撞演算已完成";
+            Title = $"演算已完成，模拟 {lstParticle.Count} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
+            MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);            
         }
 
         private bool isPlaying = false;
@@ -388,21 +383,26 @@ namespace SimulateCollision
                 return;
             }
 
-            const double intervalSec = 1.0 / 120;
+            double intervalSec = 1.0 / 120;
+            int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
             int pos = 0;
             int maxPos = snapshot.SnapshotTime.Count;
-            TimeSpan dur = TimeSpan.Zero; // 计时器
+            Stopwatch swPlay = new(); // 计时器
 
             InitializeParticle();
             isPlaying = true;
             miStop.IsEnabled = true;
 
+            var lastTime = swPlay.Elapsed;
+            swPlay.Start();
             while (isPlaying)
             {
-                await Task.Delay((int)(intervalSec * 1000)); // 等待1帧间隔
-
-                dur = dur.Add(TimeSpan.FromSeconds(intervalSec)); // 更新计时器
-                var durSec = dur.TotalSeconds; // 计时器更新后的秒数
+                if (swPlay.Elapsed.Subtract(lastTime).TotalSeconds < intervalSec)
+                {
+                    await Task.Delay(delayMilliseconds); // 等待直到超过1帧时间
+                    continue;
+                }
+                var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
 
                 while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
                 {
@@ -422,8 +422,8 @@ namespace SimulateCollision
                 if (pos + 1 == maxPos) break;
 
                 UpdateParticleAndRedrawAt(durSec); // 根据当前时间，更新粒子位置，并重绘UI
+                lastTime = swPlay.Elapsed;
             }
-
             SetUIItem(true);
             if (!isPlaying)
                 miSave.IsEnabled = false;
