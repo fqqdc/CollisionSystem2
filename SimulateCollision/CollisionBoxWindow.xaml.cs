@@ -201,7 +201,13 @@ namespace SimulateCollision
             double velocity = generateWin.Velocity;
 
             lstParticle = CreateParticles(size, sizeDev, panelWidth, panelHeight, leftMargin, rightMargin, topMargin, bottomMargin, velocity, n);
+
+            maxMass = (size + sizeDev * 2) * (size + sizeDev * 2);
+            minMass = (size - sizeDev * 2) * (size - sizeDev * 2);
+            minMass = Math.Max(minMass, 0);
+
             lstParticleUIElement = CreateEllipses(lstParticle);
+
             mainPanel.Children.Clear();
             lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
 
@@ -216,13 +222,54 @@ namespace SimulateCollision
             }
         }
 
+        double maxMass = 0;
+        double minMass = 0;
+        byte[][] colors = new byte[][] {
+            new byte[] { 127, 127, 127 },
+            new byte[] { 163, 73, 164 },
+            new byte[] { 63, 72, 204 },
+            new byte[] { 0, 162, 232 },
+            new byte[] { 34, 177, 76 },
+            new byte[] { 255, 242, 0 },
+            new byte[] { 255, 127, 39 },
+            new byte[] { 237, 28, 36 },
+            new byte[] { 136, 0, 21 },
+            new byte[] { 0, 0, 0 }};
+
+        private Color CreateColorByMass(double mass)
+        {
+
+
+            var maxLevel = colors.Length - 1;
+            var interval = 1.0 / maxLevel;
+            var value = (mass - minMass) / (maxMass - minMass);
+            value = Math.Min(value, 1);
+            value = Math.Max(value, 0);
+            var level = (int)(value / interval);
+
+            if (value == 0 || value == 1)
+                return Color.FromRgb(colors[level][0], colors[level][1], colors[level][2]);
+
+            var colorStart = colors[level];
+            var colorEnd = colors[level + 1];
+
+            value = value - (interval * level);
+            var factor = value / interval;
+
+            var r = (byte)(colorStart[0] + (colorEnd[0] - colorStart[0]) * factor);
+            var g = (byte)(colorStart[1] + (colorEnd[1] - colorStart[1]) * factor);
+            var b = (byte)(colorStart[2] + (colorEnd[2] - colorStart[2]) * factor);
+            return Color.FromRgb(r, g, b);
+        }
+
         private List<UIElement> CreateEllipses(List<Particle> lstParticle)
         {
             List<UIElement> lstEllipse = new();
 
+
             foreach (var particle in lstParticle)
             {
-                var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, Fill = Brushes.Black };
+                var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, Fill = new SolidColorBrush(CreateColorByMass(particle.Mass)) };
                 lstEllipse.Add(ell);
             }
 
@@ -289,13 +336,13 @@ namespace SimulateCollision
             double panelHeight = mainPanel.ActualHeight;
 
             CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), panelWidth, panelHeight);
-            int n,max = 0;
+            int n, max = 0;
             await Task.Run(() =>
             {
                 int count = 0;
                 n = ccs.QueueLength;
                 double ccsTime = ccs.NextStep();
-                
+
                 while (ccsTime < simTime)
                 {
                     count += 1;
