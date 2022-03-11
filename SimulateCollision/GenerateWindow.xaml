@@ -16,7 +16,7 @@
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5">
             <Label>粒子大小：</Label>
             <TextBox VerticalContentAlignment="Center" Text="2" Width="50" x:Name="txtSize" />
-            <Label>0.5~</Label>
+            <Label>0.1~</Label>
             <Label>[2]</Label>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5">

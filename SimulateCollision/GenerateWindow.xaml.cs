@@ -74,7 +74,7 @@ namespace SimulateCollision
 
             if (!double.TryParse(txtSize.Text, out size) || size < 0)
                 size = 2.0;
-            size = Math.Max(0.5, size);
+            size = Math.Max(0.1, size);
 
             if (!double.TryParse(txtSizeDev.Text, out sizeDev))
                 sizeDev = 1;

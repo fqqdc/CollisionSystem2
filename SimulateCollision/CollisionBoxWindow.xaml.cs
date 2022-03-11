@@ -150,7 +150,7 @@ namespace SimulateCollision
                 countTry += 1;
 
                 var (rndSize, _) = GaussianRandom68(size - sizeDev, size + sizeDev);
-                if (rndSize < 0.5) continue;
+                if (rndSize < 0.1) continue;
 
                 var rad = rndSize * 5;
                 var mass = rndSize * rndSize;
@@ -243,6 +243,8 @@ namespace SimulateCollision
             var maxLevel = colors.Length - 1;
             var interval = 1.0 / maxLevel;
             var value = (mass - minMass) / (maxMass - minMass);
+            if (double.IsNaN(value))
+                value = 1;
             value = Math.Min(value, 1);
             value = Math.Max(value, 0);
             var level = (int)(value / interval);
