@@ -14,17 +14,17 @@ namespace SimulateCollision
             SnapshotData = new();
         }
 
-        public List<double> SnapshotTime { get; init; }
+        public List<float> SnapshotTime { get; init; }
         public List<SnapshotData[]> SnapshotData { get; init; }
     }
 
-    public struct SnapshotData
+    public record struct SnapshotData
     {
-        public int Index;
-        public double PosX;
-        public double PosY;
-        public double VecX;
-        public double VecY;
+        public int Index { init; get; }
+        public float PosX { init; get; }
+        public float PosY { init; get; }
+        public float VecX { init; get; }
+        public float VecY { init; get; }
     }
 
 }

@@ -11,7 +11,7 @@ namespace SimulateCollision
      * 基于事件驱动模拟的粒子碰撞
      * 粒子对象
      */
-    public class ParticleF
+    public class Particle
     {
         public const float INFINITY = float.PositiveInfinity;
 
@@ -41,7 +41,7 @@ namespace SimulateCollision
 
         public int Count { get; private set; }
 
-        public ParticleF(float rx, float ry, float vx, float vy, float radius, float mass)
+        public Particle(float rx, float ry, float vx, float vy, float radius, float mass)
         {
             this.px = rx;
             this.py = ry;
@@ -54,13 +54,13 @@ namespace SimulateCollision
             this.Count = 0;
         }
 
-        public static ParticleF CreateParticle()
+        public static Particle CreateParticle()
         {
             Random r = new();
             return new(r.NextSingle(), r.NextSingle(), r.NextSingle() * 0.01f - 0.005f, r.NextSingle() * 0.01f - 0.005f, 0.02f, 0.5f);
         }
 
-        public static ParticleF CreateParticleByInt()
+        public static Particle CreateParticleByInt()
         {
             Random r = new();
             return new(r.Next(1, 101), r.Next(1, 101), r.Next(1, 11) - 5, r.Next(1, 11) - 5, 2, 1);
@@ -75,7 +75,7 @@ namespace SimulateCollision
         /**
          * 距离该粒子和粒子b碰撞所需的时间
          */
-        public float TimeToHit(ParticleF that)
+        public float TimeToHit(Particle that)
         {
             if (this == that)
             {
@@ -111,13 +111,13 @@ namespace SimulateCollision
             return -(dvdr + MathF.Sqrt(d)) / dvdv;
         }
 
-        public double TimeToHit2(ParticleF that)
+        public float TimeToHit2(Particle that)
         {
             var (t1, t2) = TimeToHitByCurve(that);
-            return Math.Min(t1, t2);
+            return MathF.Min(t1, t2);
         }
 
-        public bool Intersect(ParticleF that)
+        public bool Intersect(Particle that)
         {
             var r = this.Radius + that.Radius;
             var (x1, y1) = (this.px, this.py);
@@ -126,7 +126,7 @@ namespace SimulateCollision
             return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) < r * r; ;
         }
 
-        public (double, double) TimeToHitByCurve(ParticleF that)
+        public (float, float) TimeToHitByCurve(Particle that)
         {
             var (x1o, y1o) = (this.px, this.py);
             var (x2o, y2o) = (that.px, that.py);
@@ -155,8 +155,8 @@ namespace SimulateCollision
             var expSqrt = exp2 - 4 * exp3 * exp4;
             if (expSqrt < 0) return (INFINITY, INFINITY);
 
-            var t1 = (exp1 - Math.Sqrt(exp2 - 4 * exp3 * exp4)) / (2 * exp5);
-            var t2 = (exp1 + Math.Sqrt(exp2 - 4 * exp3 * exp4)) / (2 * exp5);
+            var t1 = (exp1 - MathF.Sqrt(exp2 - 4 * exp3 * exp4)) / (2 * exp5);
+            var t2 = (exp1 + MathF.Sqrt(exp2 - 4 * exp3 * exp4)) / (2 * exp5);
 
             return (t1, t2);
         }
@@ -164,7 +164,7 @@ namespace SimulateCollision
         /**
          * 距离该粒子和垂直墙体碰撞所需的时间
          */
-        public double TimeToHitVerticalWall(double left = 0, double right = 1)
+        public float TimeToHitVerticalWall(float left = 0, float right = 1)
         {
             if (vx > 0)
             {
@@ -183,7 +183,7 @@ namespace SimulateCollision
         /**
          * 距离该粒子和水平墙体碰撞所需的时间
          */
-        public double TimeToHitHorizontalWall(double top = 0, double bottom = 1)
+        public float TimeToHitHorizontalWall(float top = 0, float bottom = 1)
         {
             if (vy > 0)
             {
@@ -202,7 +202,7 @@ namespace SimulateCollision
         /**
          * 碰撞后该粒子的速度
          */
-        public void BounceOff(ParticleF that)
+        public void BounceOff(Particle that)
         {
             var (r1x, r1y) = (this.px, this.py);
             var (r2x, r2y) = (that.px, that.py);

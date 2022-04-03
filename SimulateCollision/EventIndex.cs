@@ -9,13 +9,13 @@ namespace SimulateCollision
 {
     public class EventIndex
     {
-        public double Time { get; private set; }
+        public float Time { get; private set; }
         public int IndexA { get; private set; } = -1;
         public int IndexB { get; private set; } = -1;
         public int CountA { get; private set; } = -1;
         public int CountB { get; private set; } = -1;
 
-        public EventIndex(double t, Particle a, int indexA, Particle b, int indexB)
+        public EventIndex(float t, Particle a, int indexA, Particle b, int indexB)
         {
             Debug.Assert(t > 0);
 

@@ -22,11 +22,11 @@ namespace SimulateCollision
     {
         private class ParticleData
         {
-            public double Update { get; set; }
-            public double PosX { get; set; }
-            public double PosY { get; set; }
-            public double VecX { get; set; }
-            public double VecY { get; set; }
+            public float Update { get; set; }
+            public float PosX { get; set; }
+            public float PosY { get; set; }
+            public float VecX { get; set; }
+            public float VecY { get; set; }
         }
 
         /// <summary>
@@ -106,8 +106,8 @@ namespace SimulateCollision
             {
                 if (bs.BaseStream.Position < bs.BaseStream.Length)
                 {
-                    var width = bs.ReadDouble();
-                    var height = bs.ReadDouble();
+                    var width = bs.ReadSingle();
+                    var height = bs.ReadSingle();
                     win.WindowState = WindowState.Normal;
                     win.Width = width;
                     win.Height = height;
@@ -115,12 +115,12 @@ namespace SimulateCollision
 
                 while (bs.BaseStream.Position < bs.BaseStream.Length)
                 {
-                    var rx = bs.ReadDouble();
-                    var ry = bs.ReadDouble();
-                    var vx = bs.ReadDouble();
-                    var vy = bs.ReadDouble();
-                    var radius = bs.ReadDouble();
-                    var mass = bs.ReadDouble();
+                    var rx = bs.ReadSingle();
+                    var ry = bs.ReadSingle();
+                    var vx = bs.ReadSingle();
+                    var vy = bs.ReadSingle();
+                    var radius = bs.ReadSingle();
+                    var mass = bs.ReadSingle();
 
                     particles.Add(new(rx, ry, vx, vy, radius, mass));
                 }
@@ -160,7 +160,7 @@ namespace SimulateCollision
                 var vx = (r.NextDouble() - 0.5) * max_vx;
                 var vy = (r.NextDouble() - 0.5) * max_vy;
 
-                Particle newObj = new(px, py, vx, vy, rad, mass);
+                Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
 
                 if (lstParticle.All(p => newObj.Intersect(p) == false)
                     && newObj.PosX - newObj.Radius > leftMargin && newObj.PosX + newObj.Radius < rightMargin
@@ -337,7 +337,7 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), panelWidth, panelHeight);
+            CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();
             await Task.Run(() =>
@@ -370,7 +370,7 @@ namespace SimulateCollision
             SetUIItem(true);
 
             Title = $"演算已完成，模拟 {lstParticle.Count} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
-            MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);            
+            MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
         }
 
         private bool isPlaying = false;
@@ -485,9 +485,9 @@ namespace SimulateCollision
             for (int i = 0; i < lstParticleData.Count; i++)
             {
                 var rad = lstParticle[i].Radius;
-                var dt = time - lstParticleData[i].Update;
+                var dt = (float)time - lstParticleData[i].Update;
 
-                lstParticleData[i].Update = time;
+                lstParticleData[i].Update = (float)time;
 
                 var x = lstParticleData[i].PosX + lstParticleData[i].VecX * dt;
                 lstParticleData[i].PosX = x;

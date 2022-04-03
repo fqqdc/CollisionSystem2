@@ -21,6 +21,8 @@
     <Compile Remove="CollisionSystem.cs" />
     <Compile Remove="CudaError.cs" />
     <Compile Remove="Event.cs" />
+    <Compile Remove="Particle.cs" />
+    <Compile Remove="ParticleD.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,24 +10,24 @@ namespace SimulateCollision
     public class CollisionCoreSystemIndex
     {
         private readonly Particle[] particles;
-        private double height, width;
+        private float height, width;
         private PriorityQueue<EventIndex> priorityQueue;
         private SystemSnapshot snapshot;
-        private double simTime;
+        private float simTime;
 
         /**
          * 模拟时钟
          */
-        private double systemTime;
+        private float systemTime;
 
-        public double SystemTime
+        public float SystemTime
         {
             get { return systemTime; }
             private set { systemTime = value; }
         }
 
 
-        public CollisionCoreSystemIndex(Particle[] particles, double width, double height, double simTime)
+        public CollisionCoreSystemIndex(Particle[] particles, float width, float height, float simTime)
         {
             this.particles = particles;
             this.width = width;
@@ -126,19 +126,19 @@ namespace SimulateCollision
 
             for (int i = 0; i < particles.Length; i++)
             {
-                double dt = a.TimeToHit(particles[i]);
+                var dt = a.TimeToHit(particles[i]);
                 if (systemTime + dt <= simTime)
                     priorityQueue.Enqueue(new EventIndex(systemTime + dt, a, indexA, particles[i], i));
             }
 
             {
-                double dtX = a.TimeToHitVerticalWall(0, this.width);
+                var dtX = a.TimeToHitVerticalWall(0, this.width);
                 if (systemTime + dtX <= simTime)
                     priorityQueue.Enqueue(new EventIndex(systemTime + dtX, a, indexA, null, -1));
             }
 
             {
-                double dtY = a.TimeToHitHorizontalWall(0, this.height);
+                var dtY = a.TimeToHitHorizontalWall(0, this.height);
                 if (systemTime + dtY <= simTime)
                     priorityQueue.Enqueue(new EventIndex(systemTime + dtY, null, -1, a, indexA));
             }
