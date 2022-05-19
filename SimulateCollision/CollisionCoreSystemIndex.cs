@@ -11,9 +11,8 @@ namespace SimulateCollision
     {
         private readonly Particle[] particles;
         private float height, width;
-        private PriorityQueue<EventIndex> priorityQueue;
+        private PriorityQueue<EventIndex, float> priorityQueue;
         private SystemSnapshot snapshot;
-        private float simTime;
 
         /**
          * 模拟时钟
@@ -23,36 +22,40 @@ namespace SimulateCollision
         public float SystemTime
         {
             get { return systemTime; }
-            private set { systemTime = value; }
         }
 
+        public int QueueLength
+        {
+            get
+            {
+                return priorityQueue.Count;
+            }
+        }
 
-        public CollisionCoreSystemIndex(Particle[] particles, float width, float height, float simTime)
+        public CollisionCoreSystemIndex(Particle[] particles, float width, float height)
         {
             this.particles = particles;
             this.width = width;
             this.height = height;
-            this.simTime = simTime;
 
             Initialize();
         }
 
         private void Initialize()
         {
-            priorityQueue = new(new EventIndexComparer());
+            priorityQueue = new();
             snapshot = new SystemSnapshot();
             systemTime = 0;
 
-            priorityQueue.Enqueue(new EventIndex(simTime, null, -1, null, -1));
             for (int i = 0; i < particles.Length; i++)
             {
-                PredictCollisions(particles[i], i);
+                PredictCollisions(i);
             }
 
             SnapshotAll();
         }
 
-        public int NextStep()
+        public double NextStep()
         {
             while (priorityQueue.Count != 0)
             {
@@ -66,44 +69,29 @@ namespace SimulateCollision
 
                 systemTime = e.Time;
 
-                Particle a = null, b = null;
+                if (e.IndexA != -1 && e.IndexB != -1)
+                {
+                    particles[e.IndexA].BounceOff(ref particles[e.IndexB]);
+                }
+                else if (e.IndexA != -1 && e.IndexB == -1)
+                {
+                    particles[e.IndexA].BounceOffVerticalWall();
+                }
+                else if (e.IndexA == -1 && e.IndexB != -1)
+                {
+                    particles[e.IndexB].BounceOffHorizontalWall();
+                }
 
                 if (e.IndexA != -1)
-                {
-                    a = particles[e.IndexA];
-                }
-
+                    PredictCollisions(e.IndexA);
                 if (e.IndexB != -1)
-                {
-                    b = particles[e.IndexB];
-                }
+                    PredictCollisions(e.IndexB);
 
-
-                if (a != null && b != null)
-                {
-                    a.BounceOff(b);
-                }
-                else if (a != null && b == null)
-                {
-                    a.BounceOffVerticalWall();
-                }
-                else if (a == null && b != null)
-                {
-                    b.BounceOffHorizontalWall();
-                }
-                else
-                {
-                    SnapshotAll();
-                }
-
-                PredictCollisions(a, e.IndexA);
-                PredictCollisions(b, e.IndexB);
-
-                SnapshotParticle(a, e.IndexA, b, e.IndexB);                
+                SnapshotParticle(e.IndexA, e.IndexB);
                 break;
             }
 
-            return priorityQueue.Count;
+            return systemTime;
         }
 
         public SystemSnapshot SystemSnapshot
@@ -117,34 +105,36 @@ namespace SimulateCollision
         /**
          * 预测其他粒子的碰撞事件
          */
-        private void PredictCollisions(Particle a, int indexA)
+        private void PredictCollisions(int indexA)
         {
-            if (a == null)
+            if (indexA == -1)
             {
                 return;
             }
 
+            ref Particle a = ref particles[indexA];
+
             for (int i = 0; i < particles.Length; i++)
             {
                 var dt = a.TimeToHit(particles[i]);
-                if (systemTime + dt <= simTime)
-                    priorityQueue.Enqueue(new EventIndex(systemTime + dt, a, indexA, particles[i], i));
+                if (dt != Particle.INFINITY)
+                    priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
-                if (systemTime + dtX <= simTime)
-                    priorityQueue.Enqueue(new EventIndex(systemTime + dtX, a, indexA, null, -1));
+                if (dtX != Particle.INFINITY)
+                    priorityQueue.Enqueue(EventIndex.CreateEventHitVertical(systemTime + dtX, a.Count, indexA), systemTime + dtX);
             }
 
             {
                 var dtY = a.TimeToHitHorizontalWall(0, this.height);
-                if (systemTime + dtY <= simTime)
-                    priorityQueue.Enqueue(new EventIndex(systemTime + dtY, null, -1, a, indexA));
+                if (dtY != Particle.INFINITY)
+                    priorityQueue.Enqueue(EventIndex.CreateEventHitHorizontal(systemTime + dtY, a.Count, indexA), systemTime + dtY);
             }
         }
 
-        private void SnapshotAll()
+        public void SnapshotAll()
         {
             snapshot.SnapshotTime.Add(systemTime);
             SnapshotData[] data = new SnapshotData[particles.Length];
@@ -155,11 +145,11 @@ namespace SimulateCollision
             snapshot.SnapshotData.Add(data);
         }
 
-        private void SnapshotParticle(Particle a, int indexA, Particle b, int indexB)
+        private void SnapshotParticle(int indexA, int indexB)
         {
             int count = 0;
-            if (a != null) count += 1;
-            if (b != null) count += 1;
+            if (indexA != -1) count += 1;
+            if (indexB != -1) count += 1;
 
             if (count == 0) return;
 
@@ -168,14 +158,16 @@ namespace SimulateCollision
             SnapshotData[] data = new SnapshotData[count];
             int i = 0;
 
-            if (a != null)
+            if (indexA != -1)
             {
+                var a = particles[indexA];
                 data[i] = new() { Index = indexA, PosX = a.PosX, PosY = a.PosY, VecX = a.VecX, VecY = a.VecY };
                 i += 1;
             }
 
-            if (b != null)
+            if (indexB != -1)
             {
+                var b = particles[indexB];
                 data[i] = new() { Index = indexB, PosX = b.PosX, PosY = b.PosY, VecX = b.VecX, VecY = b.VecY };
             }
 

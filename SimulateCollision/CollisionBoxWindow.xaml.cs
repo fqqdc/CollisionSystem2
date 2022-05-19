@@ -20,7 +20,7 @@ namespace SimulateCollision
 {
     public partial class CollisionBoxWindow : Window
     {
-        private class ParticleData
+        private struct ParticleData
         {
             public float Update { get; set; }
             public float PosX { get; set; }
@@ -44,7 +44,7 @@ namespace SimulateCollision
         /// <summary>
         /// 粒子位置、位移信息
         /// </summary>
-        private List<ParticleData> lstParticleData;
+        private ParticleData[] arrParticleData;
 
         static (double, double) GaussianRandom68(double min, double max)
         {
@@ -72,60 +72,62 @@ namespace SimulateCollision
             return (z0, z1);
         }
 
-        static void SaveParticles(Window win, List<Particle> particles)
+        void SaveParticles(List<Particle> particles)
         {
             var fi = new FileInfo("particles.data");
             if (fi.Exists) fi.Delete();
             using var fs = fi.Open(FileMode.CreateNew, FileAccess.Write);
-            using var bs = new BinaryWriter(fs);
-            bs.Write(win.ActualWidth);
-            bs.Write(win.ActualHeight);
+            using var bw = new BinaryWriter(fs);
+            bw.Write(ActualWidth);
+            bw.Write(ActualHeight);
+            bw.Write(minMass);
+            bw.Write(maxMass);
+            bw.Write(particles.Count);
             foreach (var p in particles)
             {
-                bs.Write(p.PosX);
-                bs.Write(p.PosY);
-                bs.Write(p.VecX);
-                bs.Write(p.VecY);
-                bs.Write(p.Radius);
-                bs.Write(p.Mass);
+                bw.Write(p.PosX);
+                bw.Write(p.PosY);
+                bw.Write(p.VecX);
+                bw.Write(p.VecY);
+                bw.Write(p.Radius);
+                Debug.Assert(p.Radius > 0);
+                bw.Write(p.Mass);
+                Debug.Assert(p.Mass > 0);
             }
 
-            bs.Flush();
+            bw.Flush();
         }
 
-        static List<Particle> LoadParticles(Window win)
+        List<Particle> LoadParticles()
         {
             List<Particle> particles = new List<Particle>();
             var fi = new FileInfo("particles.data");
             if (!fi.Exists) return particles;
 
             using var fs = fi.Open(FileMode.Open, FileAccess.Read);
-            using var bs = new BinaryReader(fs);
+            using var br = new BinaryReader(fs);
 
-            try
+            var width = br.ReadDouble();
+            var height = br.ReadDouble();
+            WindowState = WindowState.Normal;
+            Width = width;
+            Height = height;
+            minMass = br.ReadDouble();
+            maxMass = br.ReadDouble();
+            int nParticles = br.ReadInt32();
+            for (int i = 0; i < nParticles; i++)
             {
-                if (bs.BaseStream.Position < bs.BaseStream.Length)
-                {
-                    var width = bs.ReadSingle();
-                    var height = bs.ReadSingle();
-                    win.WindowState = WindowState.Normal;
-                    win.Width = width;
-                    win.Height = height;
-                }
+                var rx = br.ReadSingle();
+                var ry = br.ReadSingle();
+                var vx = br.ReadSingle();
+                var vy = br.ReadSingle();
+                var radius = br.ReadSingle();
+                Debug.Assert(radius > 0);
+                var mass = br.ReadSingle();
+                Debug.Assert(mass > 0);
 
-                while (bs.BaseStream.Position < bs.BaseStream.Length)
-                {
-                    var rx = bs.ReadSingle();
-                    var ry = bs.ReadSingle();
-                    var vx = bs.ReadSingle();
-                    var vy = bs.ReadSingle();
-                    var radius = bs.ReadSingle();
-                    var mass = bs.ReadSingle();
-
-                    particles.Add(new(rx, ry, vx, vy, radius, mass));
-                }
+                particles.Add(new(rx, ry, vx, vy, radius, mass));
             }
-            catch (EndOfStreamException) { }
 
             return particles;
         }
@@ -268,7 +270,6 @@ namespace SimulateCollision
         {
             List<UIElement> lstEllipse = new();
 
-
             foreach (var particle in lstParticle)
             {
                 var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, Fill = new SolidColorBrush(CreateColorByMass(particle.Mass)) };
@@ -285,7 +286,7 @@ namespace SimulateCollision
                 MessageBox.Show(this, "未存在可保存的粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            SaveParticles(this, lstParticle);
+            SaveParticles(lstParticle);
         }
 
         private void btnLoad_Click(object sender, RoutedEventArgs e)
@@ -293,7 +294,7 @@ namespace SimulateCollision
             ClearCalculateResult();
             SetUIItem(true);
 
-            lstParticle = LoadParticles(this);
+            lstParticle = LoadParticles();
             lstParticleUIElement = CreateEllipses(lstParticle);
             mainPanel.Children.Clear();
             lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
@@ -337,7 +338,7 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            CollisionCoreSystemIndexUnlimit ccs = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            CollisionCoreSystemIndex ccs = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();
             await Task.Run(() =>
@@ -414,11 +415,11 @@ namespace SimulateCollision
                     for (int i = 0; i < snapshot.SnapshotData[pos].Length; i++)
                     {
                         var index = snapshot.SnapshotData[pos][i].Index;
-                        lstParticleData[index].Update = snapshot.SnapshotTime[pos];
-                        lstParticleData[index].PosX = snapshot.SnapshotData[pos][i].PosX;
-                        lstParticleData[index].PosY = snapshot.SnapshotData[pos][i].PosY;
-                        lstParticleData[index].VecX = snapshot.SnapshotData[pos][i].VecX;
-                        lstParticleData[index].VecY = snapshot.SnapshotData[pos][i].VecY;
+                        arrParticleData[index].Update = snapshot.SnapshotTime[pos];
+                        arrParticleData[index].PosX = snapshot.SnapshotData[pos][i].PosX;
+                        arrParticleData[index].PosY = snapshot.SnapshotData[pos][i].PosY;
+                        arrParticleData[index].VecX = snapshot.SnapshotData[pos][i].VecX;
+                        arrParticleData[index].VecY = snapshot.SnapshotData[pos][i].VecY;
                     }
                 }
                 if (pos + 1 == maxPos) break;
@@ -464,17 +465,17 @@ namespace SimulateCollision
         private void InitializeParticle()
         {
             // 根据快照初始化粒子信息
-            this.lstParticleData = new();
+            this.arrParticleData = new ParticleData[snapshot.SnapshotData[0].Length];
             for (int i = 0; i < snapshot.SnapshotData[0].Length; i++)
             {
-                this.lstParticleData.Add(new()
+                this.arrParticleData[i]= new()
                 {
                     Update = 0,
                     PosX = snapshot.SnapshotData[0][i].PosX,
                     PosY = snapshot.SnapshotData[0][i].PosY,
                     VecX = snapshot.SnapshotData[0][i].VecX,
                     VecY = snapshot.SnapshotData[0][i].VecY,
-                });
+                };
             }
 
             UpdateParticleAndRedrawAt(0); // 重绘UI
@@ -482,19 +483,21 @@ namespace SimulateCollision
 
         private void UpdateParticleAndRedrawAt(double time)
         {
-            for (int i = 0; i < lstParticleData.Count; i++)
+            for (int i = 0; i < arrParticleData.Length; i++)
             {
                 var rad = lstParticle[i].Radius;
-                var dt = (float)time - lstParticleData[i].Update;
+                var dt = (float)time - arrParticleData[i].Update;
+                var newItem = arrParticleData[i];
 
-                lstParticleData[i].Update = (float)time;
+                newItem.Update = (float)time;
 
-                var x = lstParticleData[i].PosX + lstParticleData[i].VecX * dt;
-                lstParticleData[i].PosX = x;
+                var x = arrParticleData[i].PosX + arrParticleData[i].VecX * dt;
+                newItem.PosX = x;
 
-                var y = lstParticleData[i].PosY + lstParticleData[i].VecY * dt;
-                lstParticleData[i].PosY = y;
+                var y = arrParticleData[i].PosY + arrParticleData[i].VecY * dt;
+                newItem.PosY = y;
 
+                arrParticleData[i] = newItem;
                 Canvas.SetLeft(lstParticleUIElement[i], x - rad);
                 Canvas.SetTop(lstParticleUIElement[i], y - rad);
             }
@@ -515,7 +518,7 @@ namespace SimulateCollision
         private void ClearCalculateResult()
         {
             this.snapshot = null;
-            this.lstParticleData = null;
+            this.arrParticleData = null;
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)

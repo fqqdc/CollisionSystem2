@@ -7,33 +7,47 @@ using System.Threading.Tasks;
 
 namespace SimulateCollision
 {
-    public class EventIndex
+    public struct EventIndex
     {
-        public float Time { get; private set; }
-        public int IndexA { get; private set; } = -1;
-        public int IndexB { get; private set; } = -1;
-        public int CountA { get; private set; } = -1;
-        public int CountB { get; private set; } = -1;
+        public float Time { get; init; }
+        public int IndexA { get; init; } = -1;
+        public int IndexB { get; init; } = -1;
+        public int CountA { get; init; } = -1;
+        public int CountB { get; init; } = -1;
+        public EventIndex() { Time = default; }
 
-        public EventIndex(float t, Particle a, int indexA, Particle b, int indexB)
+        public static EventIndex CreateEvent(float t, int countA, int indexA, int countB, int indexB)
         {
             Debug.Assert(t > 0);
 
             //创造一个发生在时间t且a和b相关的新事件
-            this.Time = t;
-
-            if (a != null)
-            {
-                IndexA = indexA;
-                CountA = a.Count;
-            }
-
-            if (b != null)
-            {
-                IndexB = indexB;
-                CountB = b.Count;
-            }
+            return new EventIndex { Time = t, IndexA = indexA, CountA = countA, IndexB = indexB, CountB = countB };
         }
+
+        public static EventIndex CreateEventHitVertical(float t, int countA, int indexA)
+        {
+            Debug.Assert(t > 0);
+
+            //创造一个发生在时间t与a相关的新事件
+            return new EventIndex { Time = t, IndexA = indexA, CountA = countA };
+        }
+
+        public static EventIndex CreateEventHitHorizontal(float t, int countB, int indexB)
+        {
+            Debug.Assert(t > 0);
+
+            //创造一个发生在时间t与a相关的新事件
+            return new EventIndex { Time = t, IndexB = indexB, CountB = countB };
+        }
+
+        public static EventIndex CreateEventSnapshotAll(float t)
+        {
+            Debug.Assert(t > 0);
+
+            //创造一个发生在时间t与a相关的新事件
+            return new EventIndex { Time = t };
+        }
+
 
         public bool IsValid(Particle[] arrParticle)
         {
@@ -46,25 +60,6 @@ namespace SimulateCollision
                 return false;
             }
             return true;
-        }
-    }
-
-    public class EventIndexComparer : IComparer<EventIndex>
-    {
-        public int Compare(EventIndex x, EventIndex y)
-        {
-            if (x.Time < y.Time)
-            {
-                return -1;
-            }
-            else if (x.Time > y.Time)
-            {
-                return 1;
-            }
-            else
-            {
-                return x.GetHashCode() - y.GetHashCode();
-            }
         }
     }
 }

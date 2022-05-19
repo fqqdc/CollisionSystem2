@@ -11,7 +11,7 @@ namespace SimulateCollision
      * 基于事件驱动模拟的粒子碰撞
      * 粒子对象
      */
-    public class Particle
+    public struct Particle
     {
         public const float INFINITY = float.PositiveInfinity;
 
@@ -77,10 +77,10 @@ namespace SimulateCollision
          */
         public float TimeToHit(Particle that)
         {
-            if (this == that)
-            {
-                return INFINITY;
-            }
+            //if (this == that)
+            //{
+            //    return INFINITY;
+            //}
 
             var (rx1, ry1) = (this.px, this.py);
             var (rx2, ry2) = (that.px, that.py);
@@ -202,7 +202,7 @@ namespace SimulateCollision
         /**
          * 碰撞后该粒子的速度
          */
-        public void BounceOff(Particle that)
+        public void BounceOff(ref Particle that)
         {
             var (r1x, r1y) = (this.px, this.py);
             var (r2x, r2y) = (that.px, that.py);
