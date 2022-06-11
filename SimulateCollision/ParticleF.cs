@@ -75,7 +75,7 @@ namespace SimulateCollision
         /**
          * 距离该粒子和粒子b碰撞所需的时间
          */
-        public float TimeToHit(Particle that)
+        public float TimeToHit(ref Particle that)
         {
             //if (this == that)
             //{
@@ -111,13 +111,13 @@ namespace SimulateCollision
             return -(dvdr + MathF.Sqrt(d)) / dvdv;
         }
 
-        public float TimeToHit2(Particle that)
+        public float TimeToHit2(ref Particle that)
         {
-            var (t1, t2) = TimeToHitByCurve(that);
+            var (t1, t2) = TimeToHitByCurve(ref that);
             return MathF.Min(t1, t2);
         }
 
-        public bool Intersect(Particle that)
+        public bool Intersect(ref Particle that)
         {
             var r = this.Radius + that.Radius;
             var (x1, y1) = (this.px, this.py);
@@ -126,7 +126,7 @@ namespace SimulateCollision
             return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) < r * r; ;
         }
 
-        public (float, float) TimeToHitByCurve(Particle that)
+        public (float, float) TimeToHitByCurve(ref Particle that)
         {
             var (x1o, y1o) = (this.px, this.py);
             var (x2o, y2o) = (that.px, that.py);
