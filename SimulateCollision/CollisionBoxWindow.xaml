@@ -12,19 +12,14 @@
             <MenuItem x:Name="miSave" Header="保存当前" Click="btnSave_Click" />
             <MenuItem x:Name="miLoad" Header="载入" Click="btnLoad_Click" />
             <Separator />
-            <MenuItem x:Name="miCalculate" Header="碰撞演算" Click="btnCalculate_Click" />
+            <MenuItem x:Name="miCalculate" Header="从头演算" Click="btnCalculate_Click" />
             <Separator />
             <MenuItem x:Name="miPlay" Header="从头播放" Click="btnPlay_Click" />
             <MenuItem x:Name="miStop" Header="⏹️停止" Click="btnStop_Click" />
             <MenuItem x:Name="miReset" Header="⏮️重置" Click="btnReset_Click" />
-            <MenuItem x:Name="miResetEnd" Header="⏭️重置" Click="btnResetEnd_Click" />
         </ContextMenu>
     </Window.ContextMenu>
     <Grid>
-        <Grid VerticalAlignment="Top" HorizontalAlignment="Left" Visibility="Collapsed" >
-            <StackPanel>
-            </StackPanel>
-        </Grid>
         <Border BorderBrush="Red" BorderThickness="1" Margin="10">
             <Canvas x:Name="mainPanel">
             </Canvas>

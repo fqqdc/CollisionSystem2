@@ -27,9 +27,9 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5">
             <Label>参考速度：</Label>
-            <TextBox VerticalContentAlignment="Center" Text="0.5" Width="50" x:Name="txtVelocity"/>
+            <TextBox VerticalContentAlignment="Center" Text="0.1" Width="50" x:Name="txtVelocity"/>
             <Label>0.01~</Label>
-            <Label>[0.5]</Label>
+            <Label>[0.1]</Label>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5">
             <Label>边缘宽度：</Label>

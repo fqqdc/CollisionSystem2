@@ -132,35 +132,62 @@ namespace SimulateCollision
             return particles;
         }
 
-        private static List<Particle> CreateParticles(double size, double sizeDev,
-            double panelWidth, double panelHeight,
-            double leftMargin, double rightMargin, double topMargin, double bottomMargin,
-            double velocity, int particlesNumber)
+        private record CreateParticlesParameters
         {
+            public double Size { get; init; }
+            public double SizeDev { get; init; }
+            public double PanelWidth { get; init; }
+            public double PanelHeight { get; init; }
+            public double LeftMargin { get; init; }
+            public double RightMargin { get; init; }
+            public double TopMargin { get; init; }
+            public double BottomMargin { get; init; }
+            public double Velocity { get; init; }
+            public int ParticlesNumber { get; init; }
+
+        }
+        private static List<Particle> CreateParticles(CreateParticlesParameters parameters)
+        {
+            double size = parameters.Size;
+            double sizeDev = parameters.SizeDev;
+
+            double panelWidth = parameters.PanelWidth;
+            double panelHeight = parameters.PanelWidth;
+
+            double leftMargin = parameters.LeftMargin;
+            double rightMargin = parameters.RightMargin;
+            double topMargin = parameters.TopMargin;
+            double bottomMargin = parameters.BottomMargin;
+
+            double velocity = parameters.Velocity;
+            int particlesNumber = parameters.ParticlesNumber;
+
             List<Particle> lstParticle = new();
             Random r = new();
             var dtStart = DateTime.Now;
-            var max_px = rightMargin - leftMargin; Debug.Assert(max_px > 0);
-            var max_py = bottomMargin - topMargin; Debug.Assert(max_py > 0);
+            var max_px = rightMargin; Debug.Assert(max_px > 0);
+            var max_py = bottomMargin; Debug.Assert(max_py > 0);
             var max_vx = panelWidth * velocity; Debug.Assert(max_vx > 0);
             var max_vy = panelHeight * velocity; Debug.Assert(max_vy > 0);
 
             //尝试生成粒子的次数
             var countTry = 0;
+            maxMass = double.MinValue;
+            minMass = double.MaxValue;
             while (countTry < particlesNumber * 10 && lstParticle.Count < particlesNumber)
             {
                 countTry += 1;
 
                 var (rndSize, _) = GaussianRandom68(size - sizeDev, size + sizeDev);
-                if (rndSize < 0.1) continue;
+                if (rndSize < 0.1) continue; // 直径小于一个像素
 
                 var rad = rndSize * 5;
-                var mass = rndSize * rndSize;
+                var mass = rndSize * rndSize;                
 
                 var px = r.NextDouble() * max_px + leftMargin;
                 var py = r.NextDouble() * max_py + topMargin;
-                var vx = (r.NextDouble() - 0.5) * max_vx;
-                var vy = (r.NextDouble() - 0.5) * max_vy;
+                var vx = (r.NextDouble() - 0.5) * max_vx * 2;
+                var vy = (r.NextDouble() - 0.5) * max_vy * 2;
 
                 Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
 
@@ -169,6 +196,9 @@ namespace SimulateCollision
                     && newObj.PosY - newObj.Radius > topMargin && newObj.PosY + newObj.Radius < bottomMargin)
                 {
                     lstParticle.Add(newObj);
+
+                    minMass = Math.Min(minMass, mass);
+                    maxMass = Math.Max(maxMass, mass);
                 }
             }
 
@@ -187,26 +217,30 @@ namespace SimulateCollision
 
             GenerateWindow generateWin = new();
             var result = generateWin.ShowDialog();
-            if (result != true) return;
+            if (result != true) 
+                return;
 
             double size = generateWin.Size;
             double sizeDev = generateWin.SizeDev;
             double margin = generateWin.BoxMargin;
-
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
             double leftMargin = panelWidth * margin;
-            double rightMargin = panelWidth - leftMargin;
             double topMargin = panelHeight * margin;
-            double bottomMargin = panelHeight - topMargin;
-            int n = generateWin.Number;
-            double velocity = generateWin.Velocity;
 
-            lstParticle = CreateParticles(size, sizeDev, panelWidth, panelHeight, leftMargin, rightMargin, topMargin, bottomMargin, velocity, n);
-
-            maxMass = (size + sizeDev * 2) * (size + sizeDev * 2);
-            minMass = (size - sizeDev * 2) * (size - sizeDev * 2);
-            minMass = Math.Max(minMass, 0);
+            lstParticle = CreateParticles(new()
+            {
+                Size = size,
+                SizeDev = sizeDev,
+                PanelWidth = panelWidth,
+                PanelHeight = panelHeight,
+                LeftMargin = leftMargin,
+                RightMargin = panelWidth - leftMargin,
+                TopMargin = panelHeight * margin,
+                BottomMargin = panelHeight - topMargin,
+                ParticlesNumber = generateWin.Number,
+                Velocity = generateWin.Velocity,
+            });
 
             lstParticleUIElement = CreateEllipses(lstParticle);
 
@@ -310,7 +344,6 @@ namespace SimulateCollision
             miCalculate.IsEnabled = isEnabled;
             miPlay.IsEnabled = isEnabled;
             miReset.IsEnabled = isEnabled;
-            miResetEnd.IsEnabled = isEnabled;
             miStop.IsEnabled = isEnabled;
         }
 
@@ -448,18 +481,6 @@ namespace SimulateCollision
             miSave.IsEnabled = false;
         }
 
-        private void btnResetEnd_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstParticle == null)
-            {
-                MessageBox.Show(this, "还未生成粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            Redraw();
-            SetUIItem(true);
-        }
-
         private void InitializeParticle()
         {
             // 根据快照初始化粒子信息
@@ -479,6 +500,10 @@ namespace SimulateCollision
             UpdateParticleAndRedrawAt(0); // 重绘UI
         }
 
+        /// <summary>
+        /// 根据粒子当前信息与当前时间的差值，更新粒子UI的位置
+        /// </summary>
+        /// <param name="time">当前时间</param>
         private void UpdateParticleAndRedrawAt(double time)
         {
             for (int i = 0; i < arrParticleData.Length; i++)
@@ -501,6 +526,9 @@ namespace SimulateCollision
             }
         }
 
+        /// <summary>
+        /// 根据粒子的初始信息，更新粒子UI的位置
+        /// </summary>
         private void Redraw()
         {
             for (int i = 0; i < lstParticle.Count; i++)

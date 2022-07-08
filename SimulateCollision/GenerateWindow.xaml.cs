@@ -81,7 +81,7 @@ namespace SimulateCollision
             sizeDev = Math.Max(0, sizeDev);
 
             if (!double.TryParse(txtVelocity.Text, out velocity))
-                velocity = 0.5;
+                velocity = 0.1;
             velocity = Math.Max(0.01, velocity);
 
             if (!double.TryParse(txtMargin.Text, out boxMargin))
