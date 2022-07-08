@@ -46,7 +46,7 @@ namespace SimulateCollision
         /// </summary>
         private ParticleData[] arrParticleData;
 
-        static (double, double) GaussianRandom68(double min, double max)
+        private static (double, double) GaussianRandom68(double min, double max)
         {
             double mu = (min + max) / 2;
             double sigma = (max - mu);
@@ -54,7 +54,7 @@ namespace SimulateCollision
             return GenerateGaussianNoise(mu, sigma);
         }
 
-        static (double, double) GenerateGaussianNoise(double mean, double stdDev)
+        private static (double, double) GenerateGaussianNoise(double mean, double stdDev)
         {
             double u, v, s;
             Random r = new Random();
@@ -72,7 +72,7 @@ namespace SimulateCollision
             return (z0, z1);
         }
 
-        void SaveParticles(List<Particle> particles)
+        private void SaveParticles(List<Particle> particles)
         {
             var fi = new FileInfo("particles.data");
             if (fi.Exists) fi.Delete();
@@ -98,7 +98,7 @@ namespace SimulateCollision
             bw.Flush();
         }
 
-        List<Particle> LoadParticles()
+        private List<Particle> LoadParticles()
         {
             List<Particle> particles = new List<Particle>();
             var fi = new FileInfo("particles.data");
@@ -132,7 +132,7 @@ namespace SimulateCollision
             return particles;
         }
 
-        static List<Particle> CreateParticles(double size, double sizeDev,
+        private static List<Particle> CreateParticles(double size, double sizeDev,
             double panelWidth, double panelHeight,
             double leftMargin, double rightMargin, double topMargin, double bottomMargin,
             double velocity, int particlesNumber)
@@ -224,9 +224,9 @@ namespace SimulateCollision
             }
         }
 
-        double maxMass = 0;
-        double minMass = 0;
-        byte[][] colors = new byte[][] {
+        private static double maxMass = 0;
+        private static double minMass = 0;
+        private static byte[][] colors = new byte[][] {
             new byte[] { 127, 127, 127 },
             new byte[] { 163, 73, 164 },
             new byte[] { 63, 72, 204 },
@@ -238,10 +238,8 @@ namespace SimulateCollision
             new byte[] { 136, 0, 21 },
             new byte[] { 0, 0, 0 }};
 
-        private Color CreateColorByMass(double mass)
+        private static Color CreateColorByMass(double mass)
         {
-
-
             var maxLevel = colors.Length - 1;
             var interval = 1.0 / maxLevel;
             var value = (mass - minMass) / (maxMass - minMass);
@@ -266,7 +264,7 @@ namespace SimulateCollision
             return Color.FromRgb(r, g, b);
         }
 
-        private List<UIElement> CreateEllipses(List<Particle> lstParticle)
+        private static List<UIElement> CreateEllipses(IEnumerable<Particle> lstParticle)
         {
             List<UIElement> lstEllipse = new();
 
@@ -468,7 +466,7 @@ namespace SimulateCollision
             this.arrParticleData = new ParticleData[snapshot.SnapshotData[0].Length];
             for (int i = 0; i < snapshot.SnapshotData[0].Length; i++)
             {
-                this.arrParticleData[i]= new()
+                this.arrParticleData[i] = new()
                 {
                     Update = 0,
                     PosX = snapshot.SnapshotData[0][i].PosX,
