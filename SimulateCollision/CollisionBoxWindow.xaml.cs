@@ -164,7 +164,7 @@ namespace SimulateCollision
 
                 Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
 
-                if (lstParticle.All(p => newObj.Intersect(p) == false)
+                if (lstParticle.All(p => newObj.Intersect(ref p) == false)
                     && newObj.PosX - newObj.Radius > leftMargin && newObj.PosX + newObj.Radius < rightMargin
                     && newObj.PosY - newObj.Radius > topMargin && newObj.PosY + newObj.Radius < bottomMargin)
                 {

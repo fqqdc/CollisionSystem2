@@ -116,7 +116,7 @@ namespace SimulateCollision
 
             for (int i = 0; i < particles.Length; i++)
             {
-                var dt = a.TimeToHit(particles[i]);
+                var dt = a.TimeToHit(ref particles[i]);
                 if (dt != Particle.INFINITY)
                     priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }
