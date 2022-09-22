@@ -80,8 +80,6 @@ namespace SimulateCollision
             using var bw = new BinaryWriter(fs);
             bw.Write(ActualWidth);
             bw.Write(ActualHeight);
-            bw.Write(minMass);
-            bw.Write(maxMass);
             bw.Write(particles.Count);
             foreach (var p in particles)
             {
@@ -102,66 +100,41 @@ namespace SimulateCollision
         {
             List<Particle> particles = new List<Particle>();
             var fi = new FileInfo("particles.data");
-            if (!fi.Exists) return particles;
-
-            using var fs = fi.Open(FileMode.Open, FileAccess.Read);
-            using var br = new BinaryReader(fs);
-
-            var width = br.ReadDouble();
-            var height = br.ReadDouble();
-            WindowState = WindowState.Normal;
-            Width = width;
-            Height = height;
-            minMass = br.ReadDouble();
-            maxMass = br.ReadDouble();
-            int nParticles = br.ReadInt32();
-            for (int i = 0; i < nParticles; i++)
+            if (fi.Exists)
             {
-                var rx = br.ReadSingle();
-                var ry = br.ReadSingle();
-                var vx = br.ReadSingle();
-                var vy = br.ReadSingle();
-                var radius = br.ReadSingle();
-                Debug.Assert(radius > 0);
-                var mass = br.ReadSingle();
-                Debug.Assert(mass > 0);
+                using var fs = fi.Open(FileMode.Open, FileAccess.Read);
+                using var br = new BinaryReader(fs);
 
-                particles.Add(new(rx, ry, vx, vy, radius, mass));
+                var width = br.ReadDouble();
+                var height = br.ReadDouble();
+                WindowState = WindowState.Normal;
+                Width = width;
+                Height = height;
+                var minMass = br.ReadDouble();
+                var maxMass = br.ReadDouble();
+                int nParticles = br.ReadInt32();
+                for (int i = 0; i < nParticles; i++)
+                {
+                    var rx = br.ReadSingle();
+                    var ry = br.ReadSingle();
+                    var vx = br.ReadSingle();
+                    var vy = br.ReadSingle();
+                    var radius = br.ReadSingle();
+                    Debug.Assert(radius > 0);
+                    var mass = br.ReadSingle();
+                    Debug.Assert(mass > 0);
+
+                    particles.Add(new(rx, ry, vx, vy, radius, mass));
+                }
             }
-
             return particles;
         }
 
-        private record CreateParticlesParameters
+        private static List<Particle> CreateParticles(double size, double sizeDev,
+            double panelWidth, double panelHeight,
+            double leftMargin, double topMargin, double rightMargin, double bottomMargin,
+            double velocity, int particlesNumber)
         {
-            public double Size { get; init; }
-            public double SizeDev { get; init; }
-            public double PanelWidth { get; init; }
-            public double PanelHeight { get; init; }
-            public double LeftMargin { get; init; }
-            public double RightMargin { get; init; }
-            public double TopMargin { get; init; }
-            public double BottomMargin { get; init; }
-            public double Velocity { get; init; }
-            public int ParticlesNumber { get; init; }
-
-        }
-        private static List<Particle> CreateParticles(CreateParticlesParameters parameters)
-        {
-            double size = parameters.Size;
-            double sizeDev = parameters.SizeDev;
-
-            double panelWidth = parameters.PanelWidth;
-            double panelHeight = parameters.PanelWidth;
-
-            double leftMargin = parameters.LeftMargin;
-            double rightMargin = parameters.RightMargin;
-            double topMargin = parameters.TopMargin;
-            double bottomMargin = parameters.BottomMargin;
-
-            double velocity = parameters.Velocity;
-            int particlesNumber = parameters.ParticlesNumber;
-
             List<Particle> lstParticle = new();
             Random r = new();
             var dtStart = DateTime.Now;
@@ -172,8 +145,6 @@ namespace SimulateCollision
 
             //尝试生成粒子的次数
             var countTry = 0;
-            maxMass = double.MinValue;
-            minMass = double.MaxValue;
             while (countTry < particlesNumber * 10 && lstParticle.Count < particlesNumber)
             {
                 countTry += 1;
@@ -182,7 +153,7 @@ namespace SimulateCollision
                 if (rndSize < 0.1) continue; // 直径小于一个像素
 
                 var rad = rndSize * 5;
-                var mass = rndSize * rndSize;                
+                var mass = rndSize * rndSize;
 
                 var px = r.NextDouble() * max_px + leftMargin;
                 var py = r.NextDouble() * max_py + topMargin;
@@ -196,9 +167,6 @@ namespace SimulateCollision
                     && newObj.PosY - newObj.Radius > topMargin && newObj.PosY + newObj.Radius < bottomMargin)
                 {
                     lstParticle.Add(newObj);
-
-                    minMass = Math.Min(minMass, mass);
-                    maxMass = Math.Max(maxMass, mass);
                 }
             }
 
@@ -212,13 +180,13 @@ namespace SimulateCollision
 
         private void btnGenerate_Click(object sender, RoutedEventArgs e)
         {
-            ClearCalculateResult();
-            SetUIItem(true);
-
             GenerateWindow generateWin = new();
             var result = generateWin.ShowDialog();
-            if (result != true) 
+            if (result != true)
                 return;
+
+            ClearCalculateResult();
+            SetUIItem(false);
 
             double size = generateWin.Size;
             double sizeDev = generateWin.SizeDev;
@@ -228,39 +196,29 @@ namespace SimulateCollision
             double leftMargin = panelWidth * margin;
             double topMargin = panelHeight * margin;
 
-            lstParticle = CreateParticles(new()
-            {
-                Size = size,
-                SizeDev = sizeDev,
-                PanelWidth = panelWidth,
-                PanelHeight = panelHeight,
-                LeftMargin = leftMargin,
-                RightMargin = panelWidth - leftMargin,
-                TopMargin = panelHeight * margin,
-                BottomMargin = panelHeight - topMargin,
-                ParticlesNumber = generateWin.Number,
-                Velocity = generateWin.Velocity,
-            });
+            lstParticle = CreateParticles(size, sizeDev,
+                panelWidth, panelHeight,
+                leftMargin, panelHeight * margin, panelWidth - leftMargin, panelHeight - topMargin,
+                generateWin.Velocity, generateWin.Number);
 
-            lstParticleUIElement = CreateEllipses(lstParticle);
-
-            mainPanel.Children.Clear();
-            lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
-
-            Redraw();
             if (lstParticle.Count > 0)
+            {
+                RebuildParticleUI();
+                Redraw();
+
                 Title = $"{lstParticle.Count} 个粒子已生成";
+            }
             else
             {
                 lstParticle = null;
                 Title = $"未能生成粒子";
                 MessageBox.Show(this, "未能生成粒子", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+
+            SetUIItem(true);
         }
 
-        private static double maxMass = 0;
-        private static double minMass = 0;
-        private static byte[][] colors = new byte[][] {
+        private static readonly byte[][] ColorTable = new byte[][] {
             new byte[] { 127, 127, 127 },
             new byte[] { 163, 73, 164 },
             new byte[] { 63, 72, 204 },
@@ -272,9 +230,9 @@ namespace SimulateCollision
             new byte[] { 136, 0, 21 },
             new byte[] { 0, 0, 0 }};
 
-        private static Color CreateColorByMass(double mass)
+        private static Color CreateColorByMass(double mass, double minMass, double maxMass)
         {
-            var maxLevel = colors.Length - 1;
+            var maxLevel = ColorTable.Length - 1;
             var interval = 1.0 / maxLevel;
             var value = (mass - minMass) / (maxMass - minMass);
             if (double.IsNaN(value))
@@ -284,10 +242,10 @@ namespace SimulateCollision
             var level = (int)(value / interval);
 
             if (value == 0 || value == 1)
-                return Color.FromRgb(colors[level][0], colors[level][1], colors[level][2]);
+                return Color.FromRgb(ColorTable[level][0], ColorTable[level][1], ColorTable[level][2]);
 
-            var colorStart = colors[level];
-            var colorEnd = colors[level + 1];
+            var colorStart = ColorTable[level];
+            var colorEnd = ColorTable[level + 1];
 
             value = value - (interval * level);
             var factor = value / interval;
@@ -302,9 +260,13 @@ namespace SimulateCollision
         {
             List<UIElement> lstEllipse = new();
 
+            var minMass = lstParticle.Min(p => p.Mass);
+            var maxMass = lstParticle.Max(p => p.Mass);
+
             foreach (var particle in lstParticle)
             {
-                var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, Fill = new SolidColorBrush(CreateColorByMass(particle.Mass)) };
+                var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, 
+                    Fill = new SolidColorBrush(CreateColorByMass(particle.Mass, minMass, maxMass)) };
                 lstEllipse.Add(ell);
             }
 
@@ -327,10 +289,7 @@ namespace SimulateCollision
             SetUIItem(true);
 
             lstParticle = LoadParticles();
-            lstParticleUIElement = CreateEllipses(lstParticle);
-            mainPanel.Children.Clear();
-            lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
-
+            RebuildParticleUI();
             Redraw();
             Title = $"{lstParticle.Count} 个粒子已生成";
         }
@@ -524,6 +483,13 @@ namespace SimulateCollision
                 Canvas.SetLeft(lstParticleUIElement[i], x - rad);
                 Canvas.SetTop(lstParticleUIElement[i], y - rad);
             }
+        }
+
+        private void RebuildParticleUI()
+        {
+            lstParticleUIElement = CreateEllipses(lstParticle);
+            mainPanel.Children.Clear();
+            lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
         }
 
         /// <summary>
