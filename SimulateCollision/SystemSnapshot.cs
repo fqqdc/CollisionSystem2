@@ -8,6 +8,8 @@ namespace SimulateCollision
 {
     public class SystemSnapshot
     {
+        public bool IsEmpty { get; init; } = true;
+
         public SystemSnapshot()
         {
             SnapshotTime = new();

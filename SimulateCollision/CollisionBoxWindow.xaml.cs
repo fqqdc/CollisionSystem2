@@ -23,23 +23,10 @@ namespace SimulateCollision
 {
     public partial class CollisionBoxWindow : Window
     {
-        private struct ParticleInfo
-        {
-            public float Update { get; set; }
-            public float PosX { get; set; }
-            public float PosY { get; set; }
-            public float VecX { get; set; }
-            public float VecY { get; set; }
-        }
-
         /// <summary>
         /// 粒子对象
         /// </summary>
         private List<Particle> lstParticle = new();
-        /// <summary>
-        /// 粒子对应的UI对象
-        /// </summary>
-        //private List<UIElement> lstParticleUIElement;
         /// <summary>
         /// 快照对象
         /// </summary>
@@ -48,31 +35,7 @@ namespace SimulateCollision
         private ParticleUI particleUI;
         private ParticleAnimation animation;
 
-        private static (double, double) GaussianRandom68(double min, double max)
-        {
-            double mu = (min + max) / 2;
-            double sigma = (max - mu);
 
-            return GenerateGaussianNoise(mu, sigma);
-        }
-
-        private static (double, double) GenerateGaussianNoise(double mean, double stdDev)
-        {
-            double u, v, s;
-            Random r = new Random();
-            do
-            {
-                u = r.NextDouble() * 2.0 - 1.0;
-                v = r.NextDouble() * 2.0 - 1.0;
-                s = u * u + v * v;
-            } while (s >= 1.0 || s == 0.0);
-
-            s = Math.Sqrt(-2.0 * Math.Log(s) / s);
-
-            var z0 = mean + stdDev * u * s;
-            var z1 = mean + stdDev * v * s;
-            return (z0, z1);
-        }
 
         private void SaveParticles(List<Particle> particles)
         {
@@ -132,49 +95,6 @@ namespace SimulateCollision
             return particles;
         }
 
-        private static List<Particle> CreateParticles(double size, double sizeDev,
-            double panelWidth, double panelHeight,
-            double leftMargin, double topMargin, double rightMargin, double bottomMargin,
-            double velocity, int particlesNumber)
-        {
-            List<Particle> lstParticle = new();
-            Random r = new();
-            var dtStart = DateTime.Now;
-            var max_px = rightMargin; Debug.Assert(max_px > 0);
-            var max_py = bottomMargin; Debug.Assert(max_py > 0);
-            var max_vx = panelWidth * velocity; Debug.Assert(max_vx > 0);
-            var max_vy = panelHeight * velocity; Debug.Assert(max_vy > 0);
-
-            //尝试生成粒子的次数
-            var countTry = 0;
-            while (countTry < particlesNumber * 10 && lstParticle.Count < particlesNumber)
-            {
-                countTry += 1;
-
-                var (rndSize, _) = GaussianRandom68(size - sizeDev, size + sizeDev);
-                if (rndSize < 0.1) continue; // 直径小于一个像素
-
-                var rad = rndSize * 5;
-                var mass = rndSize * rndSize;
-
-                var px = r.NextDouble() * max_px + leftMargin;
-                var py = r.NextDouble() * max_py + topMargin;
-                var vx = (r.NextDouble() - 0.5) * max_vx * 2;
-                var vy = (r.NextDouble() - 0.5) * max_vy * 2;
-
-                Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
-
-                if (lstParticle.All(p => newObj.Intersect(ref p) == false)
-                    && newObj.PosX - newObj.Radius > leftMargin && newObj.PosX + newObj.Radius < rightMargin
-                    && newObj.PosY - newObj.Radius > topMargin && newObj.PosY + newObj.Radius < bottomMargin)
-                {
-                    lstParticle.Add(newObj);
-                }
-            }
-
-            return lstParticle;
-        }
-
         public CollisionBoxWindow()
         {
             InitializeComponent();
@@ -194,21 +114,24 @@ namespace SimulateCollision
             ClearCalculateResult();
             SetUIItem(false);
 
-            double size = generateWin.Size;
-            double sizeDev = generateWin.SizeDev;
-            double margin = generateWin.BoxMargin;
-            double panelWidth = mainPanel.ActualWidth;
-            double panelHeight = mainPanel.ActualHeight;
-            double leftMargin = panelWidth * margin;
-            double topMargin = panelHeight * margin;
+            ParticlesBuilder builder = new();
 
-            lstParticle = CreateParticles(size, sizeDev,
-                panelWidth, panelHeight,
-                leftMargin, panelHeight * margin, panelWidth - leftMargin, panelHeight - topMargin,
-                generateWin.Velocity, generateWin.Number);
+            builder.Size = generateWin.Size;
+            builder.SizeDev = generateWin.SizeDev;
+            builder.PanelWidth = mainPanel.ActualWidth;
+            builder.PanelHeight = mainPanel.ActualHeight;
+            builder.Velocity = generateWin.Velocity;
+            builder.MaxNumber = generateWin.Number;
 
+            var margin = generateWin.BoxMargin;
+            builder.LeftMargin = builder.PanelWidth * margin;
+            builder.TopMargin = builder.PanelHeight * margin;
+            builder.RightMargin = builder.PanelWidth - builder.LeftMargin;
+            builder.BottomMargin = builder.PanelHeight - builder.TopMargin;            
 
+            lstParticle = builder.Build();
             particleUI = ParticleUI.Create(mainPanel, lstParticle);
+
             if (lstParticle.Count > 0)
             {
                 Title = $"{lstParticle.Count} 个粒子已生成";
@@ -252,7 +175,7 @@ namespace SimulateCollision
             miCalculate.IsEnabled = isEnabled;
             miPlay.IsEnabled = isEnabled;
             miReset.IsEnabled = isEnabled;
-            miStop.IsEnabled = isEnabled;
+            //miStop.IsEnabled = isEnabled;
         }
 
         bool isCalcing = false;
@@ -332,64 +255,43 @@ namespace SimulateCollision
         }
 
         private bool isPlaying = false;
+        private CancellationTokenSource csPlay = new();
 
         private async void btnPlay_Click(object sender, RoutedEventArgs e)
         {
-            SetUIItem(false);
-            if (snapshot == null)
-            {
-                MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                SetUIItem(true);
-                return;
-            }
-
-            double intervalSec = 1.0 / 120;
-            int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
-            int pos = 0;
-            int maxPos = snapshot.SnapshotTime.Count;
-            Stopwatch swPlay = new(); // 计时器
-
-            InitializeAnimation();
+            if (isPlaying) return;
             isPlaying = true;
+
+            SetUIItem(false);
             miStop.IsEnabled = true;
 
-            var lastTime = swPlay.Elapsed;
-            swPlay.Start();
-            while (isPlaying)
+            try
             {
-                if (swPlay.Elapsed.Subtract(lastTime).TotalSeconds < intervalSec)
+                if (snapshot.IsEmpty)
                 {
-                    await Task.Delay(delayMilliseconds); // 等待直到超过1帧时间
-                    continue;
+                    MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
                 }
-                var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
 
-                while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
-                {
-                    pos += 1; // 更新快照位置
-                    animation.UpdateBy(snapshot.SnapshotTime[pos], snapshot.SnapshotData[pos]); // 根据快照信息更新动画信息
-                }
-                if (pos + 1 == maxPos) break;
+                isPlaying = true;
+                miStop.IsEnabled = true;
 
-                
-                UpdateAnimationAndRedrawAt(durSec); // 根据当前时间，更新粒子位置，并重绘UI
-                lastTime = swPlay.Elapsed;
+                csPlay = new();
+                animation = new(snapshot);
+                await animation.PlayAnimationAsync(csPlay.Token, particleUI.ParticleEllipses);
             }
-            SetUIItem(true);
-            if (!isPlaying)
-                miSave.IsEnabled = false;
-
-
-        }
-
-        private void PlayAnimation()
-        {
-
+            finally
+            {
+                miStop.IsEnabled = false;
+                SetUIItem(true);
+                isPlaying = false;
+            }
         }
 
         private void btnStop_Click(object sender, RoutedEventArgs e)
         {
             isPlaying = false;
+            csPlay.Cancel();
         }
 
         private void btnReset_Click(object sender, RoutedEventArgs e)
@@ -408,23 +310,7 @@ namespace SimulateCollision
         private void InitializeAnimation()
         {
             animation = new(snapshot); // 根据快照初始化动画信息
-            UpdateAnimationAndRedrawAt(0); // 重绘UI
-        }
-
-        /// <summary>
-        /// 根据粒子当前信息与当前时间的差值，更新粒子UI的位置
-        /// </summary>
-        /// <param name="time">当前时间</param>
-        private void UpdateAnimationAndRedrawAt(double time)
-        {
-            for (int i = 0; i < lstParticle.Count; i++)
-            {
-                var rad = lstParticle[i].Radius;
-                animation.UpdateBy(time, i);
-
-                Canvas.SetLeft(particleUI.ParticleEllipses[i], animation.ParticleInfos[i].PosX - rad);
-                Canvas.SetTop(particleUI.ParticleEllipses[i], animation.ParticleInfos[i].PosY - rad);
-            }
+            animation.InitializeAnimation(particleUI.ParticleEllipses);
         }
 
         private void ClearCalculateResult()
@@ -459,13 +345,12 @@ namespace SimulateCollision
         private ParticleInfo[] arrInfos = new ParticleInfo[0];
         public ReadOnlyCollection<ParticleInfo> ParticleInfos { get => new(arrInfos); }
 
+        SystemSnapshot snapshot;
+
         public ParticleAnimation(SystemSnapshot snapshot)
         {
-            if (snapshot.SnapshotData.Count > 0)
-            {
-                arrInfos = new ParticleInfo[snapshot.SnapshotData[0].Length];
-                UpdateBy(snapshot.SnapshotTime[0], snapshot.SnapshotData[0]);
-            }
+            this.snapshot = snapshot;
+            InitializeAnimation();
         }
 
         public void UpdateBy(float snapshotTime, SnapshotData[] snapshotData)
@@ -499,12 +384,78 @@ namespace SimulateCollision
             var y = arrInfos[index].PosY + arrInfos[index].VecY * dt;
             arrInfos[index].PosY = y;
         }
+
+        /// <summary>
+        /// 根据粒子当前信息与当前时间的差值，更新粒子UI的位置
+        /// </summary>
+        /// <param name="time">当前时间</param>
+        private void UpdateAnimationAndRedrawAt(double time, IList<Ellipse> elements)
+        {
+            for (int i = 0; i < elements.Count; i++)
+            {
+                UpdateBy(time, i);
+
+                Canvas.SetLeft(elements[i], arrInfos[i].PosX - elements[i].Width * 0.5);
+                Canvas.SetTop(elements[i], arrInfos[i].PosY - elements[i].Height * 0.5);
+            }
+        }
+
+        private void InitializeAnimation()
+        {
+            // 根据快照初始化动画信息
+            if (snapshot.SnapshotData.Count > 0)
+            {
+                arrInfos = new ParticleInfo[snapshot.SnapshotData[0].Length];
+                UpdateBy(snapshot.SnapshotTime[0], snapshot.SnapshotData[0]);
+            }
+        }
+
+        public void InitializeAnimation(IList<Ellipse> elements)
+        {
+            InitializeAnimation();
+            UpdateAnimationAndRedrawAt(0, elements); // 重绘UI
+        }
+
+        public async Task PlayAnimationAsync(CancellationToken ct, IList<Ellipse> elements)
+        {
+            double intervalSec = 1.0 / 120;
+            int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
+            int pos = 0;
+            int maxPos = snapshot.SnapshotTime.Count;
+            Stopwatch swPlay = new(); // 计时器
+
+            InitializeAnimation();
+            UpdateAnimationAndRedrawAt(0, elements); // 重绘UI
+
+            var lastTime = swPlay.Elapsed;
+            swPlay.Start();
+            while (!ct.IsCancellationRequested)
+            {
+                if (swPlay.Elapsed.Subtract(lastTime).TotalSeconds < intervalSec)
+                {
+                    await Task.Delay(delayMilliseconds); // 等待直到超过1帧时间
+                    continue;
+                }
+                var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
+
+                while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
+                {
+                    pos += 1; // 更新快照位置
+                    this.UpdateBy(snapshot.SnapshotTime[pos], snapshot.SnapshotData[pos]); // 根据快照信息更新动画信息
+                }
+                if (pos + 1 == maxPos) break;
+
+
+                UpdateAnimationAndRedrawAt(durSec, elements); // 根据当前时间，更新粒子位置，并重绘UI
+                lastTime = swPlay.Elapsed;
+            }
+        }
     }
     class ParticleUI
     {
-        private List<UIElement> particleEllipses;
+        private List<Ellipse> particleEllipses;
         private Canvas mainCanvas;
-        public ReadOnlyCollection<UIElement> ParticleEllipses { get => new(particleEllipses); }
+        public ReadOnlyCollection<Ellipse> ParticleEllipses { get => new(particleEllipses); }
 
         /// <summary>
         /// 根据粒子的初始信息，更新粒子UI的位置
@@ -609,6 +560,86 @@ namespace SimulateCollision
             {
                 return new(mainCanvas, particles);
             }
+        }
+    }
+
+    class ParticlesBuilder
+    {
+        public double Size { get; set; }
+        public double SizeDev { get; set; }
+        public double PanelWidth { get; set; }
+        public double PanelHeight { get; set; }
+        public double LeftMargin { get; set; }
+        public double TopMargin { get; set; }
+        public double RightMargin { get; set; }
+        public double BottomMargin { get; set; }
+        public double Velocity { get; set; }
+        public int MaxNumber { get; set; }
+
+        public List<Particle> Build()
+        {
+            List<Particle> lstParticle = new();
+            Random r = new();
+            var dtStart = DateTime.Now;
+            var max_px = RightMargin; Debug.Assert(max_px > 0);
+            var max_py = BottomMargin; Debug.Assert(max_py > 0);
+            var max_vx = PanelWidth * Velocity; Debug.Assert(max_vx > 0);
+            var max_vy = PanelHeight * Velocity; Debug.Assert(max_vy > 0);
+
+            //尝试生成粒子的次数
+            var countTry = 0;
+            while (countTry < MaxNumber * 10 && lstParticle.Count < MaxNumber)
+            {
+                countTry += 1;
+
+                var (rndSize, _) = GaussianRandom68(Size - SizeDev, Size + SizeDev);
+                if (rndSize < 0.1) continue; // 直径小于一个像素
+
+                var rad = rndSize * 5;
+                var mass = rndSize * rndSize;
+
+                var px = r.NextDouble() * max_px + LeftMargin;
+                var py = r.NextDouble() * max_py + TopMargin;
+                var vx = (r.NextDouble() - 0.5) * max_vx * 2;
+                var vy = (r.NextDouble() - 0.5) * max_vy * 2;
+
+                Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
+
+                if (lstParticle.All(p => newObj.Intersect(ref p) == false)
+                    && newObj.PosX - newObj.Radius > LeftMargin && newObj.PosX + newObj.Radius < RightMargin
+                    && newObj.PosY - newObj.Radius > TopMargin && newObj.PosY + newObj.Radius < BottomMargin)
+                {
+                    lstParticle.Add(newObj);
+                }
+            }
+
+            return lstParticle;
+        }
+
+        private static (double, double) GaussianRandom68(double min, double max)
+        {
+            double mu = (min + max) / 2;
+            double sigma = (max - mu);
+
+            return GenerateGaussianNoise(mu, sigma);
+        }
+
+        private static (double, double) GenerateGaussianNoise(double mean, double stdDev)
+        {
+            double u, v, s;
+            Random r = new Random();
+            do
+            {
+                u = r.NextDouble() * 2.0 - 1.0;
+                v = r.NextDouble() * 2.0 - 1.0;
+                s = u * u + v * v;
+            } while (s >= 1.0 || s == 0.0);
+
+            s = Math.Sqrt(-2.0 * Math.Log(s) / s);
+
+            var z0 = mean + stdDev * u * s;
+            var z1 = mean + stdDev * v * s;
+            return (z0, z1);
         }
     }
 }

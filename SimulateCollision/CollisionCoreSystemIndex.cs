@@ -38,13 +38,16 @@ namespace SimulateCollision
             this.width = width;
             this.height = height;
 
+            priorityQueue = new();
+            snapshot = new();
+
             Initialize();
         }
 
         private void Initialize()
         {
             priorityQueue = new();
-            snapshot = new SystemSnapshot();
+            snapshot = new SystemSnapshot() { IsEmpty = false };
             systemTime = 0;
 
             for (int i = 0; i < particles.Length; i++)

@@ -15,7 +15,7 @@
             <MenuItem x:Name="miCalculate" Header="从头演算" Click="btnCalculate_Click" />
             <Separator />
             <MenuItem x:Name="miPlay" Header="从头播放" Click="btnPlay_Click" />
-            <MenuItem x:Name="miStop" Header="⏹️停止" Click="btnStop_Click" />
+            <MenuItem x:Name="miStop" Header="⏹️停止" Click="btnStop_Click" IsEnabled="False" />
             <MenuItem x:Name="miReset" Header="⏮️重置" Click="btnReset_Click" />
         </ContextMenu>
     </Window.ContextMenu>
