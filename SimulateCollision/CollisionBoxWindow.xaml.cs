@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,6 +15,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
@@ -20,7 +23,7 @@ namespace SimulateCollision
 {
     public partial class CollisionBoxWindow : Window
     {
-        private struct ParticleData
+        private struct ParticleInfo
         {
             public float Update { get; set; }
             public float PosX { get; set; }
@@ -32,19 +35,18 @@ namespace SimulateCollision
         /// <summary>
         /// 粒子对象
         /// </summary>
-        private List<Particle> lstParticle;
+        private List<Particle> lstParticle = new();
         /// <summary>
         /// 粒子对应的UI对象
         /// </summary>
-        private List<UIElement> lstParticleUIElement;
+        //private List<UIElement> lstParticleUIElement;
         /// <summary>
         /// 快照对象
         /// </summary>
         private SystemSnapshot snapshot;
-        /// <summary>
-        /// 粒子位置、位移信息
-        /// </summary>
-        private ParticleData[] arrParticleData;
+
+        private ParticleUI particleUI;
+        private ParticleAnimation animation;
 
         private static (double, double) GaussianRandom68(double min, double max)
         {
@@ -176,6 +178,10 @@ namespace SimulateCollision
         public CollisionBoxWindow()
         {
             InitializeComponent();
+
+            particleUI = ParticleUI.Create(mainPanel, null);
+            snapshot = new();
+            animation = new(snapshot);
         }
 
         private void btnGenerate_Click(object sender, RoutedEventArgs e)
@@ -201,21 +207,358 @@ namespace SimulateCollision
                 leftMargin, panelHeight * margin, panelWidth - leftMargin, panelHeight - topMargin,
                 generateWin.Velocity, generateWin.Number);
 
+
+            particleUI = ParticleUI.Create(mainPanel, lstParticle);
             if (lstParticle.Count > 0)
             {
-                RebuildParticleUI();
-                Redraw();
-
                 Title = $"{lstParticle.Count} 个粒子已生成";
             }
             else
             {
-                lstParticle = null;
+                lstParticle = new();
                 Title = $"未能生成粒子";
                 MessageBox.Show(this, "未能生成粒子", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             SetUIItem(true);
+        }
+
+        private void btnSave_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstParticle == null)
+            {
+                MessageBox.Show(this, "未存在可保存的粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            SaveParticles(lstParticle);
+        }
+
+        private void btnLoad_Click(object sender, RoutedEventArgs e)
+        {
+            ClearCalculateResult();
+            SetUIItem(true);
+
+            lstParticle = LoadParticles();
+            particleUI = ParticleUI.Create(mainPanel, lstParticle);
+            Title = $"{lstParticle.Count} 个粒子已生成";
+        }
+
+        private void SetUIItem(bool isEnabled)
+        {
+            ResizeMode = isEnabled ? ResizeMode.CanResize : ResizeMode.NoResize;
+            miGenerate.IsEnabled = isEnabled;
+            miSave.IsEnabled = isEnabled;
+            miLoad.IsEnabled = isEnabled;
+            miCalculate.IsEnabled = isEnabled;
+            miPlay.IsEnabled = isEnabled;
+            miReset.IsEnabled = isEnabled;
+            miStop.IsEnabled = isEnabled;
+        }
+
+        bool isCalcing = false;
+        private async void btnCalculate_Click(object sender, RoutedEventArgs e)
+        {
+            if (isCalcing) return;
+            isCalcing = true;
+
+            try
+            {
+                SetUIItem(false);
+                if (lstParticle == null)
+                {
+                    MessageBox.Show(this, "还未生成粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    SetUIItem(true);
+                    return;
+                }
+
+                var winCalculate = new CalculateWindow();
+                winCalculate.ShowDialog();
+                if (winCalculate.DialogResult != true)
+                {
+                    SetUIItem(true);
+                    return;
+                }
+
+                this.snapshot = await Task<SystemSnapshot>.Run(() => Calculate(winCalculate.SimTime));
+
+                particleUI.Redraw(lstParticle);
+                SetUIItem(true);
+
+                MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
+            }
+            finally
+            {
+                isCalcing = false;
+            }
+        }
+
+        private SystemSnapshot Calculate(double simTime)
+        {
+            double panelWidth = mainPanel.ActualWidth;
+            double panelHeight = mainPanel.ActualHeight;
+
+            CollisionCoreSystemIndex coreSystem = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+
+            int n, max = 0, count = 0;
+            Stopwatch sw = Stopwatch.StartNew();
+
+            n = coreSystem.QueueLength;
+            double ccsTime = coreSystem.NextStep();
+
+            while (ccsTime < simTime)
+            {
+                count += 1;
+                if (count % 1000 == 0)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        Title = $"进度：{coreSystem.SystemTime,6:F4} / {simTime} | 队列：{n,7} / {max,7} | 事件：{(int)(count / sw.Elapsed.TotalSeconds),7} / {count,7}";
+                    });
+                }
+
+                max = Math.Max(max, n);
+                n = coreSystem.QueueLength;
+                ccsTime = coreSystem.NextStep();
+            }
+
+            coreSystem.SnapshotAll();
+
+            Dispatcher.Invoke(() =>
+            {
+                Title = $"演算已完成，模拟 {lstParticle.Count} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
+            });
+
+            return coreSystem.SystemSnapshot;
+        }
+
+        private bool isPlaying = false;
+
+        private async void btnPlay_Click(object sender, RoutedEventArgs e)
+        {
+            SetUIItem(false);
+            if (snapshot == null)
+            {
+                MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                SetUIItem(true);
+                return;
+            }
+
+            double intervalSec = 1.0 / 120;
+            int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
+            int pos = 0;
+            int maxPos = snapshot.SnapshotTime.Count;
+            Stopwatch swPlay = new(); // 计时器
+
+            InitializeAnimation();
+            isPlaying = true;
+            miStop.IsEnabled = true;
+
+            var lastTime = swPlay.Elapsed;
+            swPlay.Start();
+            while (isPlaying)
+            {
+                if (swPlay.Elapsed.Subtract(lastTime).TotalSeconds < intervalSec)
+                {
+                    await Task.Delay(delayMilliseconds); // 等待直到超过1帧时间
+                    continue;
+                }
+                var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
+
+                while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
+                {
+                    pos += 1; // 更新快照位置
+                    animation.UpdateBy(snapshot.SnapshotTime[pos], snapshot.SnapshotData[pos]); // 根据快照信息更新动画信息
+                }
+                if (pos + 1 == maxPos) break;
+
+                
+                UpdateAnimationAndRedrawAt(durSec); // 根据当前时间，更新粒子位置，并重绘UI
+                lastTime = swPlay.Elapsed;
+            }
+            SetUIItem(true);
+            if (!isPlaying)
+                miSave.IsEnabled = false;
+
+
+        }
+
+        private void PlayAnimation()
+        {
+
+        }
+
+        private void btnStop_Click(object sender, RoutedEventArgs e)
+        {
+            isPlaying = false;
+        }
+
+        private void btnReset_Click(object sender, RoutedEventArgs e)
+        {
+            if (snapshot == null)
+            {
+                MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            InitializeAnimation();
+
+            miSave.IsEnabled = false;
+        }
+
+        private void InitializeAnimation()
+        {
+            animation = new(snapshot); // 根据快照初始化动画信息
+            UpdateAnimationAndRedrawAt(0); // 重绘UI
+        }
+
+        /// <summary>
+        /// 根据粒子当前信息与当前时间的差值，更新粒子UI的位置
+        /// </summary>
+        /// <param name="time">当前时间</param>
+        private void UpdateAnimationAndRedrawAt(double time)
+        {
+            for (int i = 0; i < lstParticle.Count; i++)
+            {
+                var rad = lstParticle[i].Radius;
+                animation.UpdateBy(time, i);
+
+                Canvas.SetLeft(particleUI.ParticleEllipses[i], animation.ParticleInfos[i].PosX - rad);
+                Canvas.SetTop(particleUI.ParticleEllipses[i], animation.ParticleInfos[i].PosY - rad);
+            }
+        }
+
+        private void ClearCalculateResult()
+        {
+            snapshot = new();
+            animation = new(snapshot);
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ClearCalculateResult();
+
+            lstParticle = new();
+            particleUI = ParticleUI.Create(mainPanel, null);
+            mainPanel.Children.Clear();
+        }
+
+
+    }
+
+    class ParticleAnimation
+    {
+        public struct ParticleInfo
+        {
+            public float Update { get; set; }
+            public float PosX { get; set; }
+            public float PosY { get; set; }
+            public float VecX { get; set; }
+            public float VecY { get; set; }
+        }
+
+        private ParticleInfo[] arrInfos = new ParticleInfo[0];
+        public ReadOnlyCollection<ParticleInfo> ParticleInfos { get => new(arrInfos); }
+
+        public ParticleAnimation(SystemSnapshot snapshot)
+        {
+            if (snapshot.SnapshotData.Count > 0)
+            {
+                arrInfos = new ParticleInfo[snapshot.SnapshotData[0].Length];
+                UpdateBy(snapshot.SnapshotTime[0], snapshot.SnapshotData[0]);
+            }
+        }
+
+        public void UpdateBy(float snapshotTime, SnapshotData[] snapshotData)
+        {
+            // 根据快照信息更新粒子的信息
+            for (int i = 0; i < snapshotData.Length; i++)
+            {
+                var index = snapshotData[i].Index;
+                arrInfos[index].Update = snapshotTime;
+                arrInfos[index].PosX = snapshotData[i].PosX;
+                arrInfos[index].PosY = snapshotData[i].PosY;
+                arrInfos[index].VecX = snapshotData[i].VecX;
+                arrInfos[index].VecY = snapshotData[i].VecY;
+            }
+        }
+
+        /// <summary>
+        /// 根据粒子当前信息与当前时间的差值，更新粒子位置
+        /// </summary>
+        /// <param name="time">当前时间</param>
+        public void UpdateBy(double time, int index)
+        {
+            var dt = (float)time - arrInfos[index].Update;
+            if (dt == 0) return;
+
+            arrInfos[index].Update = (float)time;
+
+            var x = arrInfos[index].PosX + arrInfos[index].VecX * dt;
+            arrInfos[index].PosX = x;
+
+            var y = arrInfos[index].PosY + arrInfos[index].VecY * dt;
+            arrInfos[index].PosY = y;
+        }
+    }
+    class ParticleUI
+    {
+        private List<UIElement> particleEllipses;
+        private Canvas mainCanvas;
+        public ReadOnlyCollection<UIElement> ParticleEllipses { get => new(particleEllipses); }
+
+        /// <summary>
+        /// 根据粒子的初始信息，更新粒子UI的位置
+        /// </summary>
+        public void Redraw(IList<Particle> particles)
+        {
+            if (particleEllipses.Count != particles.Count)
+                throw new NotSupportedException("粒子数不一致");
+
+            for (int i = 0; i < particles.Count; i++)
+            {
+                var particle = particles[i];
+                var ell = particleEllipses[i];
+
+                Canvas.SetLeft(ell, particle.PosX - particle.Radius);
+                Canvas.SetTop(ell, particle.PosY - particle.Radius);
+            }
+        }
+
+        private ParticleUI(Canvas mainCanvas, IEnumerable<Particle> particles)
+        {
+            this.mainCanvas = mainCanvas;
+            particleEllipses = new();
+
+            var minMass = particles.Min(p => p.Mass);
+            var maxMass = particles.Max(p => p.Mass);
+
+            foreach (var particle in particles)
+            {
+                var ell = new Ellipse()
+                {
+                    Width = particle.Radius * 2,
+                    Height = particle.Radius * 2,
+                    Fill = new SolidColorBrush(CreateColorByMass(particle.Mass, minMass, maxMass))
+                };
+
+                Canvas.SetLeft(ell, particle.PosX - particle.Radius);
+                Canvas.SetTop(ell, particle.PosY - particle.Radius);
+
+                particleEllipses.Add(ell);
+            }
+
+            mainCanvas.Children.Clear();
+            foreach (var element in particleEllipses)
+            {
+                mainCanvas.Children.Add(element);
+            }
+        }
+
+        private ParticleUI(Canvas mainCanvas)
+        {
+            particleEllipses = new();
+            this.mainCanvas = mainCanvas;
+            mainCanvas.Children.Clear();
         }
 
         private static readonly byte[][] ColorTable = new byte[][] {
@@ -256,272 +599,16 @@ namespace SimulateCollision
             return Color.FromRgb(r, g, b);
         }
 
-        private static List<UIElement> CreateEllipses(IEnumerable<Particle> lstParticle)
+        public static ParticleUI Create(Canvas mainCanvas, IEnumerable<Particle>? particles)
         {
-            List<UIElement> lstEllipse = new();
-
-            var minMass = lstParticle.Min(p => p.Mass);
-            var maxMass = lstParticle.Max(p => p.Mass);
-
-            foreach (var particle in lstParticle)
+            if (particles == null || !particles.Any())
             {
-                var ell = new Ellipse() { Width = particle.Radius * 2, Height = particle.Radius * 2, 
-                    Fill = new SolidColorBrush(CreateColorByMass(particle.Mass, minMass, maxMass)) };
-                lstEllipse.Add(ell);
+                return new(mainCanvas);
             }
-
-            return lstEllipse;
-        }
-
-        private void btnSave_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstParticle == null)
+            else
             {
-                MessageBox.Show(this, "未存在可保存的粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-            SaveParticles(lstParticle);
-        }
-
-        private void btnLoad_Click(object sender, RoutedEventArgs e)
-        {
-            ClearCalculateResult();
-            SetUIItem(true);
-
-            lstParticle = LoadParticles();
-            RebuildParticleUI();
-            Redraw();
-            Title = $"{lstParticle.Count} 个粒子已生成";
-        }
-
-        private void SetUIItem(bool isEnabled)
-        {
-            ResizeMode = isEnabled ? ResizeMode.CanResize : ResizeMode.NoResize;
-            miGenerate.IsEnabled = isEnabled;
-            miSave.IsEnabled = isEnabled;
-            miLoad.IsEnabled = isEnabled;
-            miCalculate.IsEnabled = isEnabled;
-            miPlay.IsEnabled = isEnabled;
-            miReset.IsEnabled = isEnabled;
-            miStop.IsEnabled = isEnabled;
-        }
-
-        private async void btnCalculate_Click(object sender, RoutedEventArgs e)
-        {
-            SetUIItem(false);
-            if (lstParticle == null)
-            {
-                MessageBox.Show(this, "还未生成粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                SetUIItem(true);
-                return;
-            }
-
-            var winCalculate = new CalculateWindow();
-            winCalculate.ShowDialog();
-            if (winCalculate.DialogResult != true)
-            {
-                SetUIItem(true);
-                return;
-            }
-
-            double simTime = winCalculate.SimTime;
-            double panelWidth = mainPanel.ActualWidth;
-            double panelHeight = mainPanel.ActualHeight;
-
-            CollisionCoreSystemIndex ccs = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
-            int n, max = 0, count = 0;
-            Stopwatch sw = Stopwatch.StartNew();
-            await Task.Run(() =>
-            {
-                n = ccs.QueueLength;
-                double ccsTime = ccs.NextStep();
-
-                while (ccsTime < simTime)
-                {
-                    count += 1;
-                    if (count % 1000 == 0)
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            Title = $"进度：{ccs.SystemTime,6:F4} / {simTime} | 队列：{n,7} / {max,7} | 事件：{(int)(count / sw.Elapsed.TotalSeconds),7} / {count,7}";
-                        });
-                    }
-
-                    max = Math.Max(max, n);
-                    n = ccs.QueueLength;
-                    ccsTime = ccs.NextStep();
-                }
-
-                ccs.SnapshotAll();
-            });
-
-            this.snapshot = ccs.SystemSnapshot;
-
-            Redraw();
-            SetUIItem(true);
-
-            Title = $"演算已完成，模拟 {lstParticle.Count} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
-            MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
-        }
-
-        private bool isPlaying = false;
-
-        private async void btnPlay_Click(object sender, RoutedEventArgs e)
-        {
-            SetUIItem(false);
-            if (snapshot == null)
-            {
-                MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                SetUIItem(true);
-                return;
-            }
-
-            double intervalSec = 1.0 / 120;
-            int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
-            int pos = 0;
-            int maxPos = snapshot.SnapshotTime.Count;
-            Stopwatch swPlay = new(); // 计时器
-
-            InitializeParticle();
-            isPlaying = true;
-            miStop.IsEnabled = true;
-
-            var lastTime = swPlay.Elapsed;
-            swPlay.Start();
-            while (isPlaying)
-            {
-                if (swPlay.Elapsed.Subtract(lastTime).TotalSeconds < intervalSec)
-                {
-                    await Task.Delay(delayMilliseconds); // 等待直到超过1帧时间
-                    continue;
-                }
-                var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
-
-                while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
-                {
-                    pos += 1; // 更新快照位置
-
-                    // 根据快照信息更新粒子的信息
-                    for (int i = 0; i < snapshot.SnapshotData[pos].Length; i++)
-                    {
-                        var index = snapshot.SnapshotData[pos][i].Index;
-                        arrParticleData[index].Update = snapshot.SnapshotTime[pos];
-                        arrParticleData[index].PosX = snapshot.SnapshotData[pos][i].PosX;
-                        arrParticleData[index].PosY = snapshot.SnapshotData[pos][i].PosY;
-                        arrParticleData[index].VecX = snapshot.SnapshotData[pos][i].VecX;
-                        arrParticleData[index].VecY = snapshot.SnapshotData[pos][i].VecY;
-                    }
-                }
-                if (pos + 1 == maxPos) break;
-
-                UpdateParticleAndRedrawAt(durSec); // 根据当前时间，更新粒子位置，并重绘UI
-                lastTime = swPlay.Elapsed;
-            }
-            SetUIItem(true);
-            if (!isPlaying)
-                miSave.IsEnabled = false;
-        }
-
-        private void btnStop_Click(object sender, RoutedEventArgs e)
-        {
-            isPlaying = false;
-        }
-
-        private void btnReset_Click(object sender, RoutedEventArgs e)
-        {
-            if (snapshot == null)
-            {
-                MessageBox.Show(this, "还未进行演算", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            InitializeParticle();
-
-            miSave.IsEnabled = false;
-        }
-
-        private void InitializeParticle()
-        {
-            // 根据快照初始化粒子信息
-            this.arrParticleData = new ParticleData[snapshot.SnapshotData[0].Length];
-            for (int i = 0; i < snapshot.SnapshotData[0].Length; i++)
-            {
-                this.arrParticleData[i] = new()
-                {
-                    Update = 0,
-                    PosX = snapshot.SnapshotData[0][i].PosX,
-                    PosY = snapshot.SnapshotData[0][i].PosY,
-                    VecX = snapshot.SnapshotData[0][i].VecX,
-                    VecY = snapshot.SnapshotData[0][i].VecY,
-                };
-            }
-
-            UpdateParticleAndRedrawAt(0); // 重绘UI
-        }
-
-        /// <summary>
-        /// 根据粒子当前信息与当前时间的差值，更新粒子UI的位置
-        /// </summary>
-        /// <param name="time">当前时间</param>
-        private void UpdateParticleAndRedrawAt(double time)
-        {
-            for (int i = 0; i < arrParticleData.Length; i++)
-            {
-                var rad = lstParticle[i].Radius;
-                var dt = (float)time - arrParticleData[i].Update;
-                var newItem = arrParticleData[i];
-
-                newItem.Update = (float)time;
-
-                var x = arrParticleData[i].PosX + arrParticleData[i].VecX * dt;
-                newItem.PosX = x;
-
-                var y = arrParticleData[i].PosY + arrParticleData[i].VecY * dt;
-                newItem.PosY = y;
-
-                arrParticleData[i] = newItem;
-                Canvas.SetLeft(lstParticleUIElement[i], x - rad);
-                Canvas.SetTop(lstParticleUIElement[i], y - rad);
+                return new(mainCanvas, particles);
             }
         }
-
-        private void RebuildParticleUI()
-        {
-            lstParticleUIElement = CreateEllipses(lstParticle);
-            mainPanel.Children.Clear();
-            lstParticleUIElement.ForEach(e => mainPanel.Children.Add(e));
-        }
-
-        /// <summary>
-        /// 根据粒子的初始信息，更新粒子UI的位置
-        /// </summary>
-        private void Redraw()
-        {
-            for (int i = 0; i < lstParticle.Count; i++)
-            {
-                var particle = lstParticle[i];
-                var ell = lstParticleUIElement[i];
-
-                Canvas.SetLeft(ell, particle.PosX - particle.Radius);
-                Canvas.SetTop(ell, particle.PosY - particle.Radius);
-            }
-        }
-
-        private void ClearCalculateResult()
-        {
-            this.snapshot = null;
-            this.arrParticleData = null;
-        }
-
-        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            ClearCalculateResult();
-
-            lstParticle = null;
-            lstParticleUIElement = null;
-            mainPanel.Children.Clear();
-        }
-
-
     }
 }
