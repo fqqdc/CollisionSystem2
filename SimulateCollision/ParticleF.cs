@@ -11,7 +11,7 @@ namespace SimulateCollision
      * 基于事件驱动模拟的粒子碰撞
      * 粒子对象
      */
-    public class Particle
+    public struct Particle
     {
         public const float INFINITY = float.PositiveInfinity;
 
@@ -54,18 +54,6 @@ namespace SimulateCollision
             this.Count = 0;
         }
 
-        public static Particle CreateParticle()
-        {
-            Random r = new();
-            return new(r.NextSingle(), r.NextSingle(), r.NextSingle() * 0.01f - 0.005f, r.NextSingle() * 0.01f - 0.005f, 0.02f, 0.5f);
-        }
-
-        public static Particle CreateParticleByInt()
-        {
-            Random r = new();
-            return new(r.Next(1, 101), r.Next(1, 101), r.Next(1, 11) - 5, r.Next(1, 11) - 5, 2, 1);
-        }
-
         public void Move(float dt)
         {
             px += vx * dt;
@@ -75,7 +63,7 @@ namespace SimulateCollision
         /**
          * 距离该粒子和粒子b碰撞所需的时间
          */
-        public float TimeToHit(Particle that)
+        public float TimeToHit(ref Particle that)
         {
             //if (this == that)
             //{
@@ -111,13 +99,13 @@ namespace SimulateCollision
             return -(dvdr + MathF.Sqrt(d)) / dvdv;
         }
 
-        public float TimeToHit2(Particle that)
+        public float TimeToHit2(ref Particle that)
         {
-            var (t1, t2) = TimeToHitByCurve(that);
+            var (t1, t2) = TimeToHitByCurve(ref that);
             return MathF.Min(t1, t2);
         }
 
-        public bool Intersect(Particle that)
+        public bool Intersect(ref Particle that)
         {
             var r = this.Radius + that.Radius;
             var (x1, y1) = (this.px, this.py);
@@ -126,7 +114,7 @@ namespace SimulateCollision
             return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) < r * r; ;
         }
 
-        public (float, float) TimeToHitByCurve(Particle that)
+        public (float, float) TimeToHitByCurve(ref Particle that)
         {
             var (x1o, y1o) = (this.px, this.py);
             var (x2o, y2o) = (that.px, that.py);
@@ -202,7 +190,7 @@ namespace SimulateCollision
         /**
          * 碰撞后该粒子的速度
          */
-        public void BounceOff(Particle that)
+        public void BounceOff(ref Particle that)
         {
             var (r1x, r1y) = (this.px, this.py);
             var (r2x, r2y) = (that.px, that.py);

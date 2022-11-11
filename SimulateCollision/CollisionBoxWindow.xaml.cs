@@ -26,7 +26,7 @@ namespace SimulateCollision
         /// <summary>
         /// 粒子对象
         /// </summary>
-        private List<Particle> lstParticle = new();
+        private Particle[] arrParticle = new Particle[0];
         /// <summary>
         /// 快照对象
         /// </summary>
@@ -127,18 +127,18 @@ namespace SimulateCollision
             builder.LeftMargin = builder.PanelWidth * margin;
             builder.TopMargin = builder.PanelHeight * margin;
             builder.RightMargin = builder.PanelWidth - builder.LeftMargin;
-            builder.BottomMargin = builder.PanelHeight - builder.TopMargin;            
+            builder.BottomMargin = builder.PanelHeight - builder.TopMargin;
 
-            lstParticle = builder.Build();
-            particleUI = ParticleUI.Create(mainPanel, lstParticle);
+            arrParticle = builder.Build();
+            particleUI = ParticleUI.Create(mainPanel, arrParticle);
 
-            if (lstParticle.Count > 0)
+            if (arrParticle.Length > 0)
             {
-                Title = $"{lstParticle.Count} 个粒子已生成";
+                Title = $"{arrParticle.Length} 个粒子已生成";
             }
             else
             {
-                lstParticle = new();
+                arrParticle = new Particle[0];
                 Title = $"未能生成粒子";
                 MessageBox.Show(this, "未能生成粒子", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -148,12 +148,12 @@ namespace SimulateCollision
 
         private void btnSave_Click(object sender, RoutedEventArgs e)
         {
-            if (lstParticle == null)
+            if (arrParticle == null)
             {
                 MessageBox.Show(this, "未存在可保存的粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            SaveParticles(lstParticle);
+            SaveParticles(arrParticle.ToList());
         }
 
         private void btnLoad_Click(object sender, RoutedEventArgs e)
@@ -161,9 +161,9 @@ namespace SimulateCollision
             ClearCalculateResult();
             SetUIItem(true);
 
-            lstParticle = LoadParticles();
-            particleUI = ParticleUI.Create(mainPanel, lstParticle);
-            Title = $"{lstParticle.Count} 个粒子已生成";
+            arrParticle = LoadParticles().ToArray();
+            particleUI = ParticleUI.Create(mainPanel, arrParticle);
+            Title = $"{arrParticle.Length} 个粒子已生成";
         }
 
         private void SetUIItem(bool isEnabled)
@@ -187,7 +187,7 @@ namespace SimulateCollision
             try
             {
                 SetUIItem(false);
-                if (lstParticle == null)
+                if (arrParticle == null)
                 {
                     MessageBox.Show(this, "还未生成粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     SetUIItem(true);
@@ -204,7 +204,7 @@ namespace SimulateCollision
 
                 this.snapshot = await Task<SystemSnapshot>.Run(() => Calculate(winCalculate.SimTime));
 
-                particleUI.Redraw(lstParticle);
+                particleUI.Redraw(arrParticle);
                 SetUIItem(true);
 
                 MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
@@ -220,7 +220,7 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            CollisionCoreSystemIndex coreSystem = new(lstParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            CollisionCoreSystemIndex coreSystem = new(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
 
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();
@@ -248,7 +248,7 @@ namespace SimulateCollision
 
             Dispatcher.Invoke(() =>
             {
-                Title = $"演算已完成，模拟 {lstParticle.Count} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
+                Title = $"演算已完成，模拟 {arrParticle.Length} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
             });
 
             return coreSystem.SystemSnapshot;
@@ -323,7 +323,7 @@ namespace SimulateCollision
         {
             ClearCalculateResult();
 
-            lstParticle = new();
+            arrParticle = new Particle[0];
             particleUI = ParticleUI.Create(mainPanel, null);
             mainPanel.Children.Clear();
         }
@@ -459,12 +459,12 @@ namespace SimulateCollision
         /// <summary>
         /// 根据粒子的初始信息，更新粒子UI的位置
         /// </summary>
-        public void Redraw(IList<Particle> particles)
+        public void Redraw(Particle[] particles)
         {
-            if (particleEllipses.Count != particles.Count)
+            if (particleEllipses.Count != particles.Length)
                 throw new NotSupportedException("粒子数不一致");
 
-            for (int i = 0; i < particles.Count; i++)
+            for (int i = 0; i < particles.Length; i++)
             {
                 var particle = particles[i];
                 var ell = particleEllipses[i];
@@ -549,9 +549,9 @@ namespace SimulateCollision
             return Color.FromRgb(r, g, b);
         }
 
-        public static ParticleUI Create(Canvas mainCanvas, IEnumerable<Particle>? particles)
+        public static ParticleUI Create(Canvas mainCanvas, Particle[] particles)
         {
-            if (particles == null || !particles.Any())
+            if (particles == null || particles.Length == 0)
             {
                 return new(mainCanvas);
             }
@@ -575,9 +575,11 @@ namespace SimulateCollision
         public double Velocity { get; set; }
         public int MaxNumber { get; set; }
 
-        public List<Particle> Build()
+        public Particle[] Build()
         {
-            List<Particle> lstParticle = new();
+            Particle[] expectParticles = new Particle[MaxNumber];
+            int createdNumber = 0;
+
             Random r = new();
             var dtStart = DateTime.Now;
             var max_px = RightMargin; Debug.Assert(max_px > 0);
@@ -587,7 +589,7 @@ namespace SimulateCollision
 
             //尝试生成粒子的次数
             var countTry = 0;
-            while (countTry < MaxNumber * 10 && lstParticle.Count < MaxNumber)
+            while (countTry < MaxNumber * 10 && createdNumber < MaxNumber)
             {
                 countTry += 1;
 
@@ -604,15 +606,35 @@ namespace SimulateCollision
 
                 Particle newObj = new((float)px, (float)py, (float)vx, (float)vy, (float)rad, (float)mass);
 
-                if (lstParticle.All(p => newObj.Intersect(p) == false)
+                //if (lstParticle.All(p => newObj.Intersect(ref p) == false)
+                //    && newObj.PosX - newObj.Radius > LeftMargin && newObj.PosX + newObj.Radius < RightMargin
+                //    && newObj.PosY - newObj.Radius > TopMargin && newObj.PosY + newObj.Radius < BottomMargin)
+                //{
+                //    lstParticle.Add(newObj);
+                //}
+
+                bool hasIntersected = false;
+                for (int i = 0; i < createdNumber; i++)
+                {
+                    if (newObj.Intersect(ref expectParticles[i]))
+                    {
+                        hasIntersected = true;
+                        break;
+                    }
+                }
+
+                if (!hasIntersected
                     && newObj.PosX - newObj.Radius > LeftMargin && newObj.PosX + newObj.Radius < RightMargin
                     && newObj.PosY - newObj.Radius > TopMargin && newObj.PosY + newObj.Radius < BottomMargin)
                 {
-                    lstParticle.Add(newObj);
+                    expectParticles[createdNumber] = newObj;
+                    createdNumber++;
                 }
+
             }
 
-            return lstParticle;
+            Array.Resize<Particle>(ref expectParticles, createdNumber);
+            return expectParticles;
         }
 
         private static (double, double) GaussianRandom68(double min, double max)

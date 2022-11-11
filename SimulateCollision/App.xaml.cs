@@ -26,7 +26,7 @@ namespace SimulateCollision
             //UI线程未捕获异常处理事件
             this.DispatcherUnhandledException += new (App_DispatcherUnhandledException);
             //Task线程内未捕获异常处理事件
-            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException; ;
             //非UI线程未捕获异常处理事件
             AppDomain.CurrentDomain.UnhandledException += new (CurrentDomain_UnhandledException);
         }
@@ -70,7 +70,7 @@ namespace SimulateCollision
             MessageBox.Show(sbEx.ToString());
         }
 
-        void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+        void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
             //task线程内未处理捕获
             MessageBox.Show("Task线程异常：" + e.Exception.Message);
