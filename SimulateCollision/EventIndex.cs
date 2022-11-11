@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SimulateCollision
 {
-    public struct EventIndex
+    public class EventIndex
     {
         public float Time { get; init; }
         public int IndexA { get; init; } = -1;

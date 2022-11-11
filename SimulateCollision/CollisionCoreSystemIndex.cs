@@ -74,7 +74,7 @@ namespace SimulateCollision
 
                 if (e.IndexA != -1 && e.IndexB != -1)
                 {
-                    particles[e.IndexA].BounceOff(ref particles[e.IndexB]);
+                    particles[e.IndexA].BounceOff(particles[e.IndexB]);
                 }
                 else if (e.IndexA != -1 && e.IndexB == -1)
                 {
@@ -119,7 +119,7 @@ namespace SimulateCollision
 
             for (int i = 0; i < particles.Length; i++)
             {
-                var dt = a.TimeToHit(ref particles[i]);
+                var dt = a.TimeToHit( particles[i]);
                 if (dt != Particle.INFINITY)
                     priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }

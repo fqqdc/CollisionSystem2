@@ -20,7 +20,7 @@ namespace SimulateCollision
         public List<SnapshotData[]> SnapshotData { get; init; }
     }
 
-    public record struct SnapshotData
+    public record SnapshotData
     {
         public int Index { init; get; }
         public float PosX { init; get; }
