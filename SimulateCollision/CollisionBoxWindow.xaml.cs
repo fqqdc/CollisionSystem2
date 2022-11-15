@@ -37,7 +37,7 @@ namespace SimulateCollision
 
 
 
-        private void SaveParticles(List<Particle> particles)
+        private void SaveParticles(Particle[] particles)
         {
             var fi = new FileInfo("particles.data");
             if (fi.Exists) fi.Delete();
@@ -45,9 +45,10 @@ namespace SimulateCollision
             using var bw = new BinaryWriter(fs);
             bw.Write(ActualWidth);
             bw.Write(ActualHeight);
-            bw.Write(particles.Count);
-            foreach (var p in particles)
+            bw.Write(particles.Length);
+            for (int i = 0; i < particles.Length; i++)
             {
+                ref var p = ref particles[i];
                 bw.Write(p.PosX);
                 bw.Write(p.PosY);
                 bw.Write(p.VecX);
@@ -61,9 +62,9 @@ namespace SimulateCollision
             bw.Flush();
         }
 
-        private List<Particle> LoadParticles()
+        private Particle[] LoadParticles()
         {
-            List<Particle> particles = new List<Particle>();
+            Particle[] arrParticle = new Particle[0];
             var fi = new FileInfo("particles.data");
             if (fi.Exists)
             {
@@ -75,9 +76,8 @@ namespace SimulateCollision
                 WindowState = WindowState.Normal;
                 Width = width;
                 Height = height;
-                var minMass = br.ReadDouble();
-                var maxMass = br.ReadDouble();
                 int nParticles = br.ReadInt32();
+                arrParticle = new Particle[nParticles];
                 for (int i = 0; i < nParticles; i++)
                 {
                     var rx = br.ReadSingle();
@@ -89,17 +89,17 @@ namespace SimulateCollision
                     var mass = br.ReadSingle();
                     Debug.Assert(mass > 0);
 
-                    particles.Add(new(rx, ry, vx, vy, radius, mass));
+                    arrParticle[i] = new(rx, ry, vx, vy, radius, mass);
                 }
             }
-            return particles;
+            return arrParticle;
         }
 
         public CollisionBoxWindow()
         {
             InitializeComponent();
 
-            particleUI = ParticleUI.Create(mainPanel, null);
+            particleUI = ParticleUI.Create(mainPanel, arrParticle);
             snapshot = new();
             animation = new(snapshot);
         }
@@ -153,7 +153,7 @@ namespace SimulateCollision
                 MessageBox.Show(this, "未存在可保存的粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            SaveParticles(arrParticle.ToList());
+            SaveParticles(arrParticle);
         }
 
         private void btnLoad_Click(object sender, RoutedEventArgs e)
@@ -324,7 +324,7 @@ namespace SimulateCollision
             ClearCalculateResult();
 
             arrParticle = new Particle[0];
-            particleUI = ParticleUI.Create(mainPanel, null);
+            particleUI = ParticleUI.Create(mainPanel, arrParticle);
             mainPanel.Children.Clear();
         }
 
