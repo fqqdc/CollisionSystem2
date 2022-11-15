@@ -34,7 +34,8 @@ namespace SimulateCollision
 
         public CollisionCoreSystemIndex(Particle[] particles, float width, float height)
         {
-            this.particles = particles;
+            
+            this.particles = particles.ToArray();
             this.width = width;
             this.height = height;
 
@@ -74,7 +75,7 @@ namespace SimulateCollision
 
                 if (e.IndexA != -1 && e.IndexB != -1)
                 {
-                    particles[e.IndexA].BounceOff(particles[e.IndexB]);
+                    particles[e.IndexA].BounceOff(ref particles[e.IndexB]);
                 }
                 else if (e.IndexA != -1 && e.IndexB == -1)
                 {
@@ -119,7 +120,7 @@ namespace SimulateCollision
 
             for (int i = 0; i < particles.Length; i++)
             {
-                var dt = a.TimeToHit( particles[i]);
+                var dt = a.TimeToHit( ref particles[i]);
                 if (dt != Particle.INFINITY)
                     priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }
