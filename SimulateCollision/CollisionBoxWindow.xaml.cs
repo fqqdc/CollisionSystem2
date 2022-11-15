@@ -352,9 +352,13 @@ namespace SimulateCollision
             InitializeAnimation();
         }
 
+        /// <summary>
+        /// 根据快照信息更新粒子的信息
+        /// </summary>
+        /// <param name="snapshotTime">快照时间</param>
+        /// <param name="snapshotData">相应时间的粒子信息</param>
         public void UpdateBy(float snapshotTime, SnapshotData[] snapshotData)
         {
-            // 根据快照信息更新粒子的信息
             for (int i = 0; i < snapshotData.Length; i++)
             {
                 var index = snapshotData[i].Index;
