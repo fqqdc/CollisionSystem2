@@ -10,7 +10,7 @@ namespace SimulateCollision
     public class CollisionCoreSystemIndex
     {
         private readonly Particle[] particles;
-        private float height, width;
+        private readonly float height, width;
         private PriorityQueue<EventIndex, float> priorityQueue;
         private SystemSnapshot snapshot;
 
@@ -35,7 +35,7 @@ namespace SimulateCollision
         public CollisionCoreSystemIndex(Particle[] particles, float width, float height)
         {
             
-            this.particles = particles.ToArray();
+            this.particles = particles;
             this.width = width;
             this.height = height;
 

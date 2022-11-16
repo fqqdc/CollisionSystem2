@@ -187,7 +187,7 @@ namespace SimulateCollision
             try
             {
                 SetUIItem(false);
-                if (arrParticle == null)
+                if (arrParticle == null || arrParticle.Length == 0)
                 {
                     MessageBox.Show(this, "还未生成粒子", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     SetUIItem(true);
@@ -255,7 +255,7 @@ namespace SimulateCollision
         }
 
         private bool isPlaying = false;
-        private CancellationTokenSource csPlay = new();
+        private CancellationTokenSource? ctsPlay;
 
         private async void btnPlay_Click(object sender, RoutedEventArgs e)
         {
@@ -264,6 +264,7 @@ namespace SimulateCollision
 
             SetUIItem(false);
             miStop.IsEnabled = true;
+            ctsPlay = new();
 
             try
             {
@@ -274,14 +275,14 @@ namespace SimulateCollision
                 }
 
                 isPlaying = true;
-                miStop.IsEnabled = true;
+                miStop.IsEnabled = true;                
 
-                csPlay = new();
                 animation = new(snapshot);
-                await animation.PlayAnimationAsync(csPlay.Token, particleUI.ParticleEllipses);
+                await animation.PlayAnimationAsync(ctsPlay.Token, particleUI.ParticleEllipses);
             }
             finally
             {
+                ctsPlay.Dispose();
                 miStop.IsEnabled = false;
                 SetUIItem(true);
                 isPlaying = false;
@@ -291,7 +292,7 @@ namespace SimulateCollision
         private void btnStop_Click(object sender, RoutedEventArgs e)
         {
             isPlaying = false;
-            csPlay.Cancel();
+            ctsPlay?.Cancel();
         }
 
         private void btnReset_Click(object sender, RoutedEventArgs e)
