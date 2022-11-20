@@ -116,8 +116,8 @@ namespace SimulateCollision
 
         public (float, float) TimeToHitByCurve(ref Particle that)
         {
-            var (x1o, y1o) = (this.px, this.py);
-            var (x2o, y2o) = (that.px, that.py);
+            var (o1x, o1y) = (this.px, this.py);
+            var (o2x, o2y) = (that.px, that.py);
             var (v1x, v1y) = (this.vx, this.vy);
             var (v2x, v2y) = (that.vx, that.vy);
             var r1 = this.Radius;
@@ -128,17 +128,17 @@ namespace SimulateCollision
             if (exp5 == 0) return (INFINITY, INFINITY);
 
             //         2   v1x   x1o - 2   v2x   x1o - 2   v1x   x2o + 2   v2x   x2o + 2   v1y   y1o - 2   v2y   y1o - 2   v1y   y2o + 2   v2y   y2o
-            var exp1 = 2 * v1x * x1o - 2 * v2x * x1o - 2 * v1x * x2o + 2 * v2x * x2o + 2 * v1y * y1o - 2 * v2y * y1o - 2 * v1y * y2o + 2 * v2y * y2o;
+            var exp1 = 2 * v1x * o1x - 2 * v2x * o1x - 2 * v1x * o2x + 2 * v2x * o2x + 2 * v1y * o1y - 2 * v2y * o1y - 2 * v1y * o2y + 2 * v2y * o2y;
 
             //(        -2   v1x   x1o + 2   v2x   x1o + 2   v1x   x2o - 2   v2x   x2o - 2   v1y   y1o + 2   v2y   y1o + 2   v1y   y2o - 2   v2y   y2o)^2
-            var exp2 = -2 * v1x * x1o + 2 * v2x * x1o + 2 * v1x * x2o - 2 * v2x * x2o - 2 * v1y * y1o + 2 * v2y * y1o + 2 * v1y * y2o - 2 * v2y * y2o;
+            var exp2 = -2 * v1x * o1x + 2 * v2x * o1x + 2 * v1x * o2x - 2 * v2x * o2x - 2 * v1y * o1y + 2 * v2y * o1y + 2 * v1y * o2y - 2 * v2y * o2y;
             exp2 *= exp2;
 
             // (       -v1x^2       - v1y   ^2  + 2   v1x   v2x - v2x   ^2  + 2   v1y   v2y - v2y   ^2)
             var exp3 = -(v1x * v1x) - v1y * v1y + 2 * v1x * v2x - v2x * v2x + 2 * v1y * v2y - v2y * v2y;
 
             //(        r1   ^2 + 2   r1   r2 + r2   ^2 - x1o   ^2  + 2   x1o   x2o - x2o   ^2  - y1o   ^2  + 2   y1o   y2o - y2o   ^2)
-            var exp4 = r1 * r1 + 2 * r1 * r2 + r2 * r2 - x1o * x1o + 2 * x1o * x2o - x2o * x2o - y1o * y1o + 2 * y1o * y2o - y2o * y2o;
+            var exp4 = r1 * r1 + 2 * r1 * r2 + r2 * r2 - o1x * o1x + 2 * o1x * o2x - o2x * o2x - o1y * o1y + 2 * o1y * o2y - o2y * o2y;
 
             var expSqrt = exp2 - 4 * exp3 * exp4;
             if (expSqrt < 0) return (INFINITY, INFINITY);
