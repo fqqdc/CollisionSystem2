@@ -157,19 +157,19 @@ namespace SimulateCollision
 
             ref Particle a = ref particles[indexA];
 
-            //for (int i = 0; i < particles.Length; i++)
-            //{
-            //    var dt = a.TimeToHit(ref particles[i]);
-            //    if (dt != Particle.INFINITY)
-            //        priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
-            //}
-            ParallelFor(0, particles.Length, i =>
+            for (int i = 0; i < particles.Length; i++)
             {
-                ref Particle a = ref particles[indexA];
                 var dt = a.TimeToHit(ref particles[i]);
                 if (dt != Particle.INFINITY)
-                    ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
-            });
+                    priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+            }
+            //ParallelFor(0, particles.Length, i =>
+            //{
+            //    ref Particle a = ref particles[indexA];
+            //    var dt = a.TimeToHit(ref particles[i]);
+            //    if (dt != Particle.INFINITY)
+            //        ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+            //});
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
