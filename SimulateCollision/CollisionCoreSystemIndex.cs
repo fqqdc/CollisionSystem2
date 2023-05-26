@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace SimulateCollision
 {
@@ -15,34 +16,42 @@ namespace SimulateCollision
         private readonly float height, width;
 
         private PriorityQueue<EventIndex, float> priorityQueue;
-        private SpinLock pqSpinLock = new();
+        private int lockTaken = 0;
 
         private SystemSnapshot snapshot;
 
         public void ConsurrentEnqueue(EventIndex element, float priority)
         {
-            bool lockTaken = false;
-            try
+            while (true)
             {
-                pqSpinLock.Enter(ref lockTaken);
-                priorityQueue.Enqueue(element, priority);
+                if (Interlocked.CompareExchange(ref lockTaken, 1, 0) == 1)
+                    break;
             }
-            finally
-            {
-                if (lockTaken) { pqSpinLock.Exit(); }
-            }
+            priorityQueue.Enqueue(element, priority);
+            lockTaken = 0;
         }
 
-        private ParallelLoopResult For(int fromInclusive, int toExclusive, Action<int> body)
+        private void For(int fromInclusive, int toExclusive, Action<int> body)
         {
-            int rangeSize = (toExclusive - fromInclusive) / Environment.ProcessorCount + 1;
-            var partitioner = Partitioner.Create(fromInclusive, toExclusive, rangeSize);
-            return Parallel.ForEach(partitioner, partitioner => {
-                for (int i = partitioner.Item1; i < partitioner.Item2; i++)
+            int rangeSize = (int)MathF.Ceiling((toExclusive - fromInclusive) / (float)Environment.ProcessorCount);
+            Task[] tasks = new Task[Environment.ProcessorCount];
+
+            for (int n = 0; n < Environment.ProcessorCount; n++)
+            {
+                int index = n;
+                
+                tasks[n] = Task.Factory.StartNew(() =>
                 {
-                    body(i);
-                }
-            });
+                    int from = fromInclusive + index * rangeSize;
+                    int to = Math.Min(toExclusive, from + rangeSize);
+                    for (int i = from; i < to; i++)
+                    {
+                        body(i);
+                    }
+                });
+            }
+
+            Task.WaitAll(tasks);
         }
 
         /**
@@ -65,7 +74,7 @@ namespace SimulateCollision
 
         public CollisionCoreSystemIndex(Particle[] particles, float width, float height)
         {
-            
+
             this.particles = particles;
             this.width = width;
             this.height = height;
@@ -149,19 +158,19 @@ namespace SimulateCollision
 
             ref Particle a = ref particles[indexA];
 
-            for (int i = 0; i < particles.Length; i++)
-            {
-                var dt = a.TimeToHit(ref particles[i]);
-                if (dt != Particle.INFINITY)
-                    priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
-            }
-            //For(0, particles.Length, i =>
+            //for (int i = 0; i < particles.Length; i++)
             //{
-            //    ref Particle a = ref particles[indexA];
             //    var dt = a.TimeToHit(ref particles[i]);
             //    if (dt != Particle.INFINITY)
-            //        ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
-            //});
+            //        priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+            //}
+            For(0, particles.Length, i =>
+            {
+                ref Particle a = ref particles[indexA];
+                var dt = a.TimeToHit(ref particles[i]);
+                if (dt != Particle.INFINITY)
+                    ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+            });
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
