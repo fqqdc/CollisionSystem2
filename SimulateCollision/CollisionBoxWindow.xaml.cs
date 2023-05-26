@@ -202,12 +202,16 @@ namespace SimulateCollision
                     return;
                 }
 
-                this.snapshot = await Task<SystemSnapshot>.Run(() => Calculate(winCalculate.SimTime));
+                var timer = Stopwatch.StartNew();
+
+                snapshot = await Task.Run(() => Calculate(winCalculate.SimTime));
 
                 particleUI.Redraw(arrParticle);
                 SetUIItem(true);
 
-                MessageBox.Show(this, "演算结束", "完成", MessageBoxButton.OK);
+                timer.Stop();
+
+                MessageBox.Show(this, $"演算结束:{timer.Elapsed}", "完成", MessageBoxButton.OK);
             }
             finally
             {

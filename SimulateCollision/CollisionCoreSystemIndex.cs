@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SimulateCollision
@@ -11,8 +13,37 @@ namespace SimulateCollision
     {
         private readonly Particle[] particles;
         private readonly float height, width;
+
         private PriorityQueue<EventIndex, float> priorityQueue;
+        private SpinLock pqSpinLock = new();
+
         private SystemSnapshot snapshot;
+
+        public void ConsurrentEnqueue(EventIndex element, float priority)
+        {
+            bool lockTaken = false;
+            try
+            {
+                pqSpinLock.Enter(ref lockTaken);
+                priorityQueue.Enqueue(element, priority);
+            }
+            finally
+            {
+                if (lockTaken) { pqSpinLock.Exit(); }
+            }
+        }
+
+        private ParallelLoopResult For(int fromInclusive, int toExclusive, Action<int> body)
+        {
+            int rangeSize = (toExclusive - fromInclusive) / Environment.ProcessorCount + 1;
+            var partitioner = Partitioner.Create(fromInclusive, toExclusive, rangeSize);
+            return Parallel.ForEach(partitioner, partitioner => {
+                for (int i = partitioner.Item1; i < partitioner.Item2; i++)
+                {
+                    body(i);
+                }
+            });
+        }
 
         /**
          * 模拟时钟
@@ -120,10 +151,17 @@ namespace SimulateCollision
 
             for (int i = 0; i < particles.Length; i++)
             {
-                var dt = a.TimeToHit( ref particles[i]);
+                var dt = a.TimeToHit(ref particles[i]);
                 if (dt != Particle.INFINITY)
                     priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }
+            //For(0, particles.Length, i =>
+            //{
+            //    ref Particle a = ref particles[indexA];
+            //    var dt = a.TimeToHit(ref particles[i]);
+            //    if (dt != Particle.INFINITY)
+            //        ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+            //});
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
@@ -178,4 +216,5 @@ namespace SimulateCollision
             snapshot.SnapshotData.Add(data);
         }
     }
+
 }
