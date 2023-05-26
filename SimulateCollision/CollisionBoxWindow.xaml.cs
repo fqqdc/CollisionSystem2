@@ -287,6 +287,7 @@ namespace SimulateCollision
             finally
             {
                 ctsPlay.Dispose();
+                ctsPlay = null;
                 miStop.IsEnabled = false;
                 SetUIItem(true);
                 isPlaying = false;

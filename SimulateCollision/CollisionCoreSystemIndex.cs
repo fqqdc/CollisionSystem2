@@ -16,7 +16,7 @@ namespace SimulateCollision
         private readonly float height, width;
 
         private PriorityQueue<EventIndex, float> priorityQueue;
-        private int lockTaken = 0;
+        private int queueLockTaken = 0;
 
         private SystemSnapshot snapshot;
 
@@ -24,18 +24,17 @@ namespace SimulateCollision
         {
             while (true)
             {
-                if (Interlocked.CompareExchange(ref lockTaken, 1, 0) == 1)
+                if (Interlocked.CompareExchange(ref queueLockTaken, 1, 0) == 0)
                     break;
             }
             priorityQueue.Enqueue(element, priority);
-            lockTaken = 0;
+            queueLockTaken = 0;
         }
 
-        private void For(int fromInclusive, int toExclusive, Action<int> body)
+        private void ParallelFor(int fromInclusive, int toExclusive, Action<int> body)
         {
             int rangeSize = (int)MathF.Ceiling((toExclusive - fromInclusive) / (float)Environment.ProcessorCount);
             Task[] tasks = new Task[Environment.ProcessorCount];
-
             for (int n = 0; n < Environment.ProcessorCount; n++)
             {
                 int index = n;
@@ -164,7 +163,7 @@ namespace SimulateCollision
             //    if (dt != Particle.INFINITY)
             //        priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             //}
-            For(0, particles.Length, i =>
+            ParallelFor(0, particles.Length, i =>
             {
                 ref Particle a = ref particles[indexA];
                 var dt = a.TimeToHit(ref particles[i]);
