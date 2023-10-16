@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using System.Windows.Controls;
 
 namespace SimulateCollision
 {
@@ -19,39 +20,6 @@ namespace SimulateCollision
         private int queueLockTaken = 0;
 
         private SystemSnapshot snapshot;
-
-        public void ConsurrentEnqueue(EventIndex element, float priority)
-        {
-            while (true)
-            {
-                if (Interlocked.CompareExchange(ref queueLockTaken, 1, 0) == 0)
-                    break;
-            }
-            priorityQueue.Enqueue(element, priority);
-            queueLockTaken = 0;
-        }
-
-        private void ParallelFor(int fromInclusive, int toExclusive, Action<int> body)
-        {
-            int rangeSize = (int)MathF.Ceiling((toExclusive - fromInclusive) / (float)Environment.ProcessorCount);
-            Task[] tasks = new Task[Environment.ProcessorCount];
-            for (int n = 0; n < Environment.ProcessorCount; n++)
-            {
-                int index = n;
-                
-                tasks[n] = Task.Factory.StartNew(() =>
-                {
-                    int from = fromInclusive + index * rangeSize;
-                    int to = Math.Min(toExclusive, from + rangeSize);
-                    for (int i = from; i < to; i++)
-                    {
-                        body(i);
-                    }
-                });
-            }
-
-            Task.WaitAll(tasks);
-        }
 
         /**
          * 模拟时钟
@@ -163,13 +131,31 @@ namespace SimulateCollision
                 if (dt != Particle.INFINITY)
                     priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
             }
-            //ParallelFor(0, particles.Length, i =>
-            //{
-            //    ref Particle a = ref particles[indexA];
-            //    var dt = a.TimeToHit(ref particles[i]);
-            //    if (dt != Particle.INFINITY)
-            //        ConsurrentEnqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
-            //});
+
+            //SpinLock spinLock = new();
+            //Parallel.For(0, particles.Length,
+            //    new() { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            //    i =>
+            //    {
+            //        ref Particle a = ref particles[indexA];
+            //        var dt = a.TimeToHit(ref particles[i]);
+            //        if (dt != Particle.INFINITY)
+            //        {
+            //            var e = EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i);
+
+            //            bool lockTaken = false;
+            //            spinLock.Enter(ref lockTaken);
+            //            try
+            //            {
+            //                priorityQueue.Enqueue(e, systemTime + dt);
+            //            }
+            //            finally
+            //            {
+            //                if (lockTaken)
+            //                    spinLock.Exit();
+            //            }
+            //        }
+            //    });
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
@@ -190,9 +176,19 @@ namespace SimulateCollision
             SnapshotData[] data = new SnapshotData[particles.Length];
             for (int i = 0; i < particles.Length; i++)
             {
-                data[i] = new() { Index = i, PosX = particles[i].PosX, PosY = particles[i].PosY, VecX = particles[i].VecX, VecY = particles[i].VecY };
+                //data[i] = new() { Index = i, PosX = particles[i].PosX, PosY = particles[i].PosY, VecX = particles[i].VecX, VecY = particles[i].VecY };
+                Pos2Rec(i, ref data[i], in particles[i]);
             }
             snapshot.SnapshotData.Add(data);
+        }
+
+        private void Pos2Rec(int i, ref SnapshotData rec, in Particle particle)
+        {
+            rec.Index = i;
+            rec.PosX = particle.PosX;
+            rec.PosY = particle.PosY;
+            rec.VecX = particle.VecX;
+            rec.VecY = particle.VecY;
         }
 
         private void SnapshotParticle(int indexA, int indexB)
@@ -210,15 +206,16 @@ namespace SimulateCollision
 
             if (indexA != -1)
             {
-                var a = particles[indexA];
-                data[i] = new() { Index = indexA, PosX = a.PosX, PosY = a.PosY, VecX = a.VecX, VecY = a.VecY };
+                //data[i] = new() { Index = indexA, PosX = a.PosX, PosY = a.PosY, VecX = a.VecX, VecY = a.VecY };
+                Pos2Rec(indexA, ref data[i], in particles[indexA]);
                 i += 1;
             }
 
             if (indexB != -1)
             {
-                var b = particles[indexB];
-                data[i] = new() { Index = indexB, PosX = b.PosX, PosY = b.PosY, VecX = b.VecX, VecY = b.VecY };
+                //var b = particles[indexB];
+                //data[i] = new() { Index = indexB, PosX = b.PosX, PosY = b.PosY, VecX = b.VecX, VecY = b.VecY };
+                Pos2Rec(indexB, ref data[i], in particles[indexB]);
             }
 
             snapshot.SnapshotData.Add(data);

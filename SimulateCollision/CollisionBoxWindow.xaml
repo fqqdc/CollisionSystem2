@@ -24,5 +24,8 @@
             <Canvas x:Name="mainPanel">
             </Canvas>
         </Border>
+        <StackPanel Margin="5" x:Name="hubPanel" Visibility="Collapsed">
+            <TextBlock x:Name="txtThread" Text="Thread Message" Background="#7FFFFFFF" HorizontalAlignment="Left" />
+        </StackPanel>
     </Grid>
 </Window>

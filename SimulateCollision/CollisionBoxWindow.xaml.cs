@@ -18,6 +18,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SimulateCollision
 {
@@ -95,6 +96,7 @@ namespace SimulateCollision
             return arrParticle;
         }
 
+        DispatcherTimer updateTimer = new();
         public CollisionBoxWindow()
         {
             InitializeComponent();
@@ -102,6 +104,19 @@ namespace SimulateCollision
             particleUI = ParticleUI.Create(mainPanel, arrParticle);
             snapshot = new();
             animation = new(snapshot);
+
+            updateTimer.Interval = TimeSpan.FromSeconds(1 / 30f);
+            updateTimer.Tick += UpdateTimer_Tick;
+        }
+
+        private void UpdateTimer_Tick(object? sender, EventArgs e)
+        {
+            UpdateThreadsMessage();
+        }
+
+        private void UpdateThreadsMessage()
+        {
+            txtThread.Text = $"ThreadCount:{ThreadPool.ThreadCount},PendingWorkItemCount:{ThreadPool.PendingWorkItemCount},CompletedWorkItemCount:{ThreadPool.CompletedWorkItemCount}";
         }
 
         private void btnGenerate_Click(object sender, RoutedEventArgs e)
@@ -183,6 +198,7 @@ namespace SimulateCollision
         {
             if (isCalcing) return;
             isCalcing = true;
+            updateTimer.Start();
 
             try
             {
@@ -216,6 +232,7 @@ namespace SimulateCollision
             finally
             {
                 isCalcing = false;
+                updateTimer.Stop();
             }
         }
 
@@ -279,7 +296,7 @@ namespace SimulateCollision
                 }
 
                 isPlaying = true;
-                miStop.IsEnabled = true;                
+                miStop.IsEnabled = true;
 
                 animation = new(snapshot);
                 await animation.PlayAnimationAsync(ctsPlay.Token, particleUI.ParticleEllipses);
