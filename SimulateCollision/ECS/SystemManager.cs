@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography.Xml;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SimulateCollision.ECS
 {
@@ -30,7 +25,7 @@ namespace SimulateCollision.ECS
         {
             var type = typeof(TSystem);
 
-            Debug.Assert(!mSystems.ContainsKey(type), "System used before registered.");
+            Debug.Assert(mSystems.ContainsKey(type), "System used before registered.");
 
             // 设置System的签名，该签名描述了该System包含了哪些Component
             mSignatures.Add(type, signature);

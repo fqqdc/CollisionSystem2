@@ -62,7 +62,7 @@ namespace SimulateCollision.ECS
             mSystemManager.EntitySignatureChanged(entity, signature);
         }
 
-        public ref TComponent GetComponent<TComponent>(Entity entity) where TComponent : struct
+        public ref TComponent GetComponent<TComponent>(in Entity entity) where TComponent : struct
         {
             return ref mComponentManager.GetComponent<TComponent>(entity);
         }

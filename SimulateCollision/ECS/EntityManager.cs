@@ -17,8 +17,10 @@ namespace SimulateCollision.ECS
 
         public int MaxEntity { get; init; }
 
-        public EntityManager(int MaxEntity)
+        public EntityManager(int maxEntity)
         {
+            MaxEntity = maxEntity;
+
             // 用所有有效的Entity进行初始化
             for (Entity entity = new(0); entity.Id < MaxEntity; ++entity.Id)
             {

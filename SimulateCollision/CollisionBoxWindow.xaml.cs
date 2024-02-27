@@ -6,9 +6,11 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -241,7 +243,8 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            CollisionCoreSystemIndex coreSystem = new(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            ICollisionCoreSystem coreSystem = new CollisionCoreSystemIndex(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            //ICollisionCoreSystem coreSystem = new ECS.CollisionCoreSystemECS(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
 
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();
@@ -365,7 +368,7 @@ namespace SimulateCollision
             public float VecY { get; set; }
         }
 
-        private ParticleInfo[] arrInfos = new ParticleInfo[0];
+        private ParticleInfo[] arrInfos = [];
 
         SystemSnapshot snapshot;
 
@@ -380,24 +383,21 @@ namespace SimulateCollision
         /// </summary>
         /// <param name="snapshotTime">快照时间</param>
         /// <param name="snapshotData">相应时间的粒子信息</param>
-        public void UpdateBy(float snapshotTime, ReadOnlyCollection<SnapshotData> snapshotData)
+        public void UpdateByData(float snapshotTime, SnapshotData snapshotData)
         {
-            for (int i = 0; i < snapshotData.Count; i++)
-            {
-                var index = snapshotData[i].Index;
-                arrInfos[index].Update = snapshotTime;
-                arrInfos[index].PosX = snapshotData[i].PosX;
-                arrInfos[index].PosY = snapshotData[i].PosY;
-                arrInfos[index].VecX = snapshotData[i].VecX;
-                arrInfos[index].VecY = snapshotData[i].VecY;
-            }
+            var index = snapshotData.Index;
+            arrInfos[index].Update = snapshotTime;
+            arrInfos[index].PosX = snapshotData.PosX;
+            arrInfos[index].PosY = snapshotData.PosY;
+            arrInfos[index].VecX = snapshotData.VecX;
+            arrInfos[index].VecY = snapshotData.VecY;
         }
 
         /// <summary>
         /// 根据粒子当前信息与当前时间的差值，更新粒子位置
         /// </summary>
         /// <param name="time">当前时间</param>
-        public void UpdateBy(double time, int index)
+        public void Update(double time, int index)
         {
             var dt = (float)time - arrInfos[index].Update;
             if (dt == 0) return;
@@ -419,7 +419,7 @@ namespace SimulateCollision
         {
             for (int i = 0; i < elements.Count; i++)
             {
-                UpdateBy(time, i);
+                Update(time, i);
 
                 Canvas.SetLeft(elements[i], arrInfos[i].PosX - elements[i].Width * 0.5);
                 Canvas.SetTop(elements[i], arrInfos[i].PosY - elements[i].Height * 0.5);
@@ -429,10 +429,17 @@ namespace SimulateCollision
         private void InitializeAnimation()
         {
             // 根据快照初始化动画信息
-            if (snapshot.Count > 0)
+            int count = 0;
+            while (count < snapshot.Count && snapshot[count].Item1 == 0)
+                count++;
+
+            arrInfos = new ParticleInfo[count];
+
+            int index = 0;
+            while (index < snapshot.Count && snapshot[index].Item1 == 0)
             {
-                arrInfos = new ParticleInfo[snapshot[0].Item2.Count];
-                UpdateBy(snapshot[0].Item1, snapshot[0].Item2);
+                UpdateByData(snapshot[index].Item1, snapshot[index].Item2);
+                ++index;
             }
         }
 
@@ -467,7 +474,7 @@ namespace SimulateCollision
                 while (pos + 1 < maxPos && durSec > snapshot[pos + 1].Item1)
                 {
                     pos += 1; // 更新快照位置
-                    this.UpdateBy(snapshot[pos].Item1, snapshot[pos].Item2); // 根据快照信息更新动画信息
+                    this.UpdateByData(snapshot[pos].Item1, snapshot[pos].Item2); // 根据快照信息更新动画信息
                 }
                 if (pos + 1 == maxPos) break;
 

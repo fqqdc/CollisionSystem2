@@ -8,6 +8,6 @@ namespace SimulateCollision.ECS
 {
     public interface IComponentArray
     {
-        void EntityDestroyed(Entity entity);
+        void EntityDestroyed(in Entity entity);
     }
 }

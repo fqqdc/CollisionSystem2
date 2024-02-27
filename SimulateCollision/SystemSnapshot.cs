@@ -9,18 +9,18 @@ namespace SimulateCollision
 {
     public class SystemSnapshot
     {
-        private List<(float, ReadOnlyCollection<SnapshotData>)> _SnapshotData = [];
+        private List<(float, SnapshotData)> _SnapshotData = [];
 
         public bool IsEmpty { get => !_SnapshotData.Any(); }
 
         public SystemSnapshot() { }
 
-        public void Add(float time, IList<SnapshotData> data)
+        public void Add(float time, SnapshotData snapshotData)
         {
-            _SnapshotData.Add((time, new(data)));
+            _SnapshotData.Add((time, snapshotData));
         }
 
-        public (float, ReadOnlyCollection<SnapshotData>) this[int index] { get => _SnapshotData[index]; }
+        public (float, SnapshotData) this[int index] { get => _SnapshotData[index]; }
         public int Count => _SnapshotData.Count;
 
         public void Reset()

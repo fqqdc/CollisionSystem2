@@ -11,7 +11,7 @@ namespace SimulateCollision.ECS
         public float Time { get; init; }
         public Entity EntityA { get; init; }
         public Entity EntityB { get; init; }
-        public Version VersionA { get; init; }
-        public Version VersionB { get; init; }
+        public int VersionA { get; init; }
+        public int VersionB { get; init; }
     }
 }
