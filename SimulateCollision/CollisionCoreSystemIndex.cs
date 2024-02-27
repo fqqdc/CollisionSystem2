@@ -11,13 +11,12 @@ using System.Windows.Controls;
 
 namespace SimulateCollision
 {
-    public class CollisionCoreSystemIndex
+    public class CollisionCoreSystemIndex : ICollisionCoreSystem
     {
         private readonly Particle[] particles;
         private readonly float height, width;
 
         private PriorityQueue<EventIndex, float> priorityQueue;
-        private int queueLockTaken = 0;
 
         private SystemSnapshot snapshot;
 
@@ -55,7 +54,7 @@ namespace SimulateCollision
         private void Initialize()
         {
             priorityQueue = new();
-            snapshot = new SystemSnapshot() { IsEmpty = false };
+            snapshot.Reset();
             systemTime = 0;
 
             for (int i = 0; i < particles.Length; i++)
@@ -66,7 +65,7 @@ namespace SimulateCollision
             SnapshotAll();
         }
 
-        public double NextStep()
+        public float NextStep()
         {
             while (priorityQueue.Count != 0)
             {
@@ -172,23 +171,18 @@ namespace SimulateCollision
 
         public void SnapshotAll()
         {
-            snapshot.SnapshotTime.Add(systemTime);
             SnapshotData[] data = new SnapshotData[particles.Length];
             for (int i = 0; i < particles.Length; i++)
             {
                 //data[i] = new() { Index = i, PosX = particles[i].PosX, PosY = particles[i].PosY, VecX = particles[i].VecX, VecY = particles[i].VecY };
-                Pos2Rec(i, ref data[i], in particles[i]);
+                Pos2Rec(i, out data[i], in particles[i]);
             }
-            snapshot.SnapshotData.Add(data);
+            snapshot.Add(systemTime, data);
         }
 
-        private void Pos2Rec(int i, ref SnapshotData rec, in Particle particle)
+        private void Pos2Rec(int i, out SnapshotData rec, in Particle particle)
         {
-            rec.Index = i;
-            rec.PosX = particle.PosX;
-            rec.PosY = particle.PosY;
-            rec.VecX = particle.VecX;
-            rec.VecY = particle.VecY;
+            rec = new(i, particle.PosX, particle.PosY, particle.VecX, particle.VecY);
         }
 
         private void SnapshotParticle(int indexA, int indexB)
@@ -199,15 +193,13 @@ namespace SimulateCollision
 
             if (count == 0) return;
 
-            snapshot.SnapshotTime.Add(systemTime);
-
             SnapshotData[] data = new SnapshotData[count];
             int i = 0;
 
             if (indexA != -1)
             {
                 //data[i] = new() { Index = indexA, PosX = a.PosX, PosY = a.PosY, VecX = a.VecX, VecY = a.VecY };
-                Pos2Rec(indexA, ref data[i], in particles[indexA]);
+                Pos2Rec(indexA, out data[i], in particles[indexA]);
                 i += 1;
             }
 
@@ -215,10 +207,10 @@ namespace SimulateCollision
             {
                 //var b = particles[indexB];
                 //data[i] = new() { Index = indexB, PosX = b.PosX, PosY = b.PosY, VecX = b.VecX, VecY = b.VecY };
-                Pos2Rec(indexB, ref data[i], in particles[indexB]);
+                Pos2Rec(indexB, out data[i], in particles[indexB]);
             }
 
-            snapshot.SnapshotData.Add(data);
+            snapshot.Add(systemTime, data);
         }
     }
 

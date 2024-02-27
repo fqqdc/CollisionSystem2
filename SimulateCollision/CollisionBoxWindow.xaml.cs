@@ -380,9 +380,9 @@ namespace SimulateCollision
         /// </summary>
         /// <param name="snapshotTime">快照时间</param>
         /// <param name="snapshotData">相应时间的粒子信息</param>
-        public void UpdateBy(float snapshotTime, SnapshotData[] snapshotData)
+        public void UpdateBy(float snapshotTime, ReadOnlyCollection<SnapshotData> snapshotData)
         {
-            for (int i = 0; i < snapshotData.Length; i++)
+            for (int i = 0; i < snapshotData.Count; i++)
             {
                 var index = snapshotData[i].Index;
                 arrInfos[index].Update = snapshotTime;
@@ -429,10 +429,10 @@ namespace SimulateCollision
         private void InitializeAnimation()
         {
             // 根据快照初始化动画信息
-            if (snapshot.SnapshotData.Count > 0)
+            if (snapshot.Count > 0)
             {
-                arrInfos = new ParticleInfo[snapshot.SnapshotData[0].Length];
-                UpdateBy(snapshot.SnapshotTime[0], snapshot.SnapshotData[0]);
+                arrInfos = new ParticleInfo[snapshot[0].Item2.Count];
+                UpdateBy(snapshot[0].Item1, snapshot[0].Item2);
             }
         }
 
@@ -447,7 +447,7 @@ namespace SimulateCollision
             double intervalSec = 1.0 / 120;
             int delayMilliseconds = (int)Math.Max((500 * intervalSec), 1);
             int pos = 0;
-            int maxPos = snapshot.SnapshotTime.Count;
+            int maxPos = snapshot.Count;
             Stopwatch swPlay = new(); // 计时器
 
             InitializeAnimation();
@@ -464,10 +464,10 @@ namespace SimulateCollision
                 }
                 var durSec = swPlay.Elapsed.TotalSeconds; // 计时器更新后的秒数
 
-                while (pos + 1 < maxPos && durSec > snapshot.SnapshotTime[pos + 1])
+                while (pos + 1 < maxPos && durSec > snapshot[pos + 1].Item1)
                 {
                     pos += 1; // 更新快照位置
-                    this.UpdateBy(snapshot.SnapshotTime[pos], snapshot.SnapshotData[pos]); // 根据快照信息更新动画信息
+                    this.UpdateBy(snapshot[pos].Item1, snapshot[pos].Item2); // 根据快照信息更新动画信息
                 }
                 if (pos + 1 == maxPos) break;
 
