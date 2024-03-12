@@ -16,8 +16,8 @@ namespace SimulateCollision.ECS
         public Coordinator(int maxEntity, int maxComponent = 32)
         {
             // 创建指向每个Manager的指针
-            mComponentManager = new(maxEntity);
-            mEntityManager = new(maxEntity);
+            mComponentManager = new();
+            mEntityManager = new();
             mSystemManager = new();
         }
 

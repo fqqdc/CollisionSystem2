@@ -7,7 +7,7 @@ using System.Windows.Media;
 
 namespace SimulateCollision.ECS
 {
-    public class ComponentManager(int MaxEntity)
+    public class ComponentManager()
     {
         public void RegisterComponent<TComponent>() where TComponent : struct
         {
@@ -20,7 +20,7 @@ namespace SimulateCollision.ECS
             mComponentTypes.Add(type, mNextComponentType);
 
             // 创建新的ComponentArray，并将其加入映射
-            mComponentArrays.Add(type, new ComponentArray<TComponent>(MaxEntity));
+            mComponentArrays.Add(type, new ComponentArray<TComponent>());
 
             // 递增表示可用的ComponentType的变量
             ++mNextComponentType.Value;

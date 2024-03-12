@@ -1,24 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -29,7 +19,7 @@ namespace SimulateCollision
         /// <summary>
         /// 粒子对象
         /// </summary>
-        private Particle[] arrParticle = new Particle[0];
+        private Particle[] arrParticle = [];
         /// <summary>
         /// 快照对象
         /// </summary>
@@ -67,7 +57,7 @@ namespace SimulateCollision
 
         private Particle[] LoadParticles()
         {
-            Particle[] arrParticle = new Particle[0];
+            Particle[] arrParticle = [];
             var fi = new FileInfo("particles.data");
             if (fi.Exists)
             {
@@ -243,8 +233,8 @@ namespace SimulateCollision
             double panelWidth = mainPanel.ActualWidth;
             double panelHeight = mainPanel.ActualHeight;
 
-            ICollisionCoreSystem coreSystem = new CollisionCoreSystemIndex(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
-            //ICollisionCoreSystem coreSystem = new ECS.CollisionCoreSystemECS(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            //ICollisionCoreSystem coreSystem = new CollisionCoreSystemIndex(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
+            ICollisionCoreSystem coreSystem = new ECS.CollisionCoreSystemECS(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
 
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();

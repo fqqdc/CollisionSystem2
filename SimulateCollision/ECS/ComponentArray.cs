@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SimulateCollision.ECS
 {
@@ -19,26 +13,28 @@ namespace SimulateCollision.ECS
         private readonly Dictionary<int, int> mEntityToIndexMap = [];
 
         // index到Entity的映射
-        private readonly Dictionary<int, int> mIndexToEntityMap = [];
+        //private readonly Dictionary<int, int> mIndexToEntityMap = [];
+        private readonly List<int> mIndexToEntity = [];
 
-        // 有效的Entity的数量
-        int mSize;
-
-        public ComponentArray(int maxEntity)
-        {
-            CollectionsMarshal.SetCount(mComponentArray, maxEntity);
-        }
+        //public ComponentArray(int maxEntity)
+        //{
+        //    CollectionsMarshal.SetCount(mComponentArray, maxEntity);
+        //}
 
         public void InsertData(in Entity entity, TComponent component)
         {
             Debug.Assert(!mEntityToIndexMap.ContainsKey(entity.Id), "Component added to same entity more than once.");
 
             // 把新的Entity加在末尾，并更新映射
-            int newIndex = mSize;
+            int newIndex = mComponentArray.Count;
+
             mEntityToIndexMap[entity.Id] = newIndex;
-            mIndexToEntityMap[newIndex] = entity.Id;
-            mComponentArray[newIndex] = component;
-            ++mSize;
+
+            //mIndexToEntityMap[newIndex] = entity.Id;
+            mIndexToEntity.Add(entity.Id);
+
+            //mComponentArray[newIndex] = component;
+            mComponentArray.Add(component);
         }
 
         public void RemoveData(in Entity entity)
@@ -47,17 +43,22 @@ namespace SimulateCollision.ECS
 
             // 把最后一个元素放到被删除的位置，以保持数组数据的紧凑性
             int indexOfRemovedEntity = mEntityToIndexMap[entity.Id];
-            int indexOfLastElement = mSize - 1;
+            int indexOfLastElement = mComponentArray.Count;
             mComponentArray[indexOfRemovedEntity] = mComponentArray[indexOfLastElement];
 
-            // 更新映射
-            int entityOfLastElement = mIndexToEntityMap[indexOfLastElement];
-            mEntityToIndexMap[entityOfLastElement] = indexOfRemovedEntity;
-            mIndexToEntityMap[indexOfRemovedEntity] = entityOfLastElement;
+
+            if (mComponentArray.Count > 1)
+            {
+                // 更新映射
+                //int entityOfLastElement = mIndexToEntityMap[indexOfLastElement];
+                int entityOfLastElement = mIndexToEntity[mIndexToEntity.Count - 1];
+
+                mEntityToIndexMap[entityOfLastElement] = indexOfRemovedEntity;
+                mIndexToEntity[indexOfRemovedEntity] = entityOfLastElement;
+            }
 
             mEntityToIndexMap.Remove(entity.Id);
-            mIndexToEntityMap.Remove(indexOfLastElement);
-            --mSize;
+            mIndexToEntity.RemoveAt(mIndexToEntity.Count - 1);
         }
 
         public ref TComponent GetData(in Entity entity)
