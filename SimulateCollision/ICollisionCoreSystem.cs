@@ -4,9 +4,9 @@
     {
         int QueueLength { get; }
         SystemSnapshot SystemSnapshot { get; }
-        float SystemTime { get; }
+        Float SystemTime { get; }
 
-        float NextStep();
+        Float NextStep();
         void SnapshotAll();
     }
 }

@@ -1,26 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SimulateCollision
+﻿namespace SimulateCollision
 {
     public class SystemSnapshot
     {
-        private List<(float, SnapshotData)> _SnapshotData = [];
+        private List<(Float, SnapshotData)> _SnapshotData = [];
 
         public bool IsEmpty { get => !_SnapshotData.Any(); }
 
         public SystemSnapshot() { }
 
-        public void Add(float time, SnapshotData snapshotData)
+        public void Add(Float time, SnapshotData snapshotData)
         {
             _SnapshotData.Add((time, snapshotData));
         }
 
-        public (float, SnapshotData) this[int index] { get => _SnapshotData[index]; }
+        public (Float, SnapshotData) this[int index] { get => _SnapshotData[index]; }
         public int Count => _SnapshotData.Count;
 
         public void Reset()
@@ -29,6 +22,6 @@ namespace SimulateCollision
         }
     }
 
-    public record SnapshotData(int Index, float PosX, float PosY, float VecX, float VecY);
+    public record SnapshotData(int Index, Float PosX, Float PosY, Float VecX, Float VecY);
 
 }

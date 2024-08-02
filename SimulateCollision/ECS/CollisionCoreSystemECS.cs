@@ -10,8 +10,8 @@ namespace SimulateCollision.ECS
 {
     public class CollisionCoreSystemECS : ICollisionCoreSystem
     {
-        private readonly float _Height, _Width;
-        private readonly PriorityQueue<Event, float> _PriorityQueue = new();
+        private readonly Float _Height, _Width;
+        private readonly PriorityQueue<Event, Float> _PriorityQueue = new();
         private readonly Coordinator _Coordinator;
         private readonly List<Entity> _Entities = [];
         private readonly CollisionSystem _CollisionSystem;
@@ -46,9 +46,9 @@ namespace SimulateCollision.ECS
 
         public SystemSnapshot SystemSnapshot { get; } = new();
 
-        public float SystemTime { get; private set; }
+        public Float SystemTime { get; private set; }
 
-        public float NextStep()
+        public Float NextStep()
         {
             while (_PriorityQueue.Count != 0)
             {

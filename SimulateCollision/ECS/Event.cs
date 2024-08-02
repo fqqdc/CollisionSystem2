@@ -8,7 +8,7 @@ namespace SimulateCollision.ECS
 {
     public record Event
     {
-        public float Time { get; init; }
+        public Float Time { get; init; }
         public Entity EntityA { get; init; }
         public Entity EntityB { get; init; }
         public int VersionA { get; init; }

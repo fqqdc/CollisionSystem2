@@ -16,16 +16,16 @@ namespace SimulateCollision
         private readonly Particle[] particles;
         private readonly float height, width;
 
-        private PriorityQueue<EventIndex, float> priorityQueue;
+        private PriorityQueue<EventIndex, Float> priorityQueue;
 
         private SystemSnapshot snapshot;
 
         /**
          * 模拟时钟
          */
-        private float systemTime;
+        private Float systemTime;
 
-        public float SystemTime
+        public Float SystemTime
         {
             get { return systemTime; }
         }
@@ -65,7 +65,7 @@ namespace SimulateCollision
             SnapshotAll();
         }
 
-        public float NextStep()
+        public Float NextStep()
         {
             while (priorityQueue.Count != 0)
             {

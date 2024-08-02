@@ -145,7 +145,7 @@ namespace SimulateCollision
             }
             else
             {
-                arrParticle = new Particle[0];
+                arrParticle = [];
                 Title = $"未能生成粒子";
                 MessageBox.Show(this, "未能生成粒子", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -262,7 +262,7 @@ namespace SimulateCollision
 
             Dispatcher.Invoke(() =>
             {
-                Title = $"演算已完成，模拟 {arrParticle.Length} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。";
+                Title = $"演算已完成，模拟 {arrParticle.Length} 个粒子 {simTime} 秒碰撞，平均每秒计算 {(int)(count / sw.Elapsed.TotalSeconds)} 次碰撞，总计发生 {count} 次。| 队列：{max} | 事件：{count}";
             });
 
             return coreSystem.SystemSnapshot;
@@ -339,7 +339,7 @@ namespace SimulateCollision
         {
             ClearCalculateResult();
 
-            arrParticle = new Particle[0];
+            arrParticle = [];
             particleUI = ParticleUI.Create(mainPanel, arrParticle);
             mainPanel.Children.Clear();
         }
@@ -351,11 +351,11 @@ namespace SimulateCollision
     {
         public struct ParticleInfo
         {
-            public float Update { get; set; }
-            public float PosX { get; set; }
-            public float PosY { get; set; }
-            public float VecX { get; set; }
-            public float VecY { get; set; }
+            public Float Update { get; set; }
+            public Float PosX { get; set; }
+            public Float PosY { get; set; }
+            public Float VecX { get; set; }
+            public Float VecY { get; set; }
         }
 
         private ParticleInfo[] arrInfos = [];
@@ -373,7 +373,7 @@ namespace SimulateCollision
         /// </summary>
         /// <param name="snapshotTime">快照时间</param>
         /// <param name="snapshotData">相应时间的粒子信息</param>
-        public void UpdateByData(float snapshotTime, SnapshotData snapshotData)
+        public void UpdateByData(Float snapshotTime, SnapshotData snapshotData)
         {
             var index = snapshotData.Index;
             arrInfos[index].Update = snapshotTime;
@@ -387,12 +387,12 @@ namespace SimulateCollision
         /// 根据粒子当前信息与当前时间的差值，更新粒子位置
         /// </summary>
         /// <param name="time">当前时间</param>
-        public void Update(double time, int index)
+        public void Update(Float time, int index)
         {
-            var dt = (float)time - arrInfos[index].Update;
+            var dt = time - arrInfos[index].Update;
             if (dt == 0) return;
 
-            arrInfos[index].Update = (float)time;
+            arrInfos[index].Update = time;
 
             var x = arrInfos[index].PosX + arrInfos[index].VecX * dt;
             arrInfos[index].PosX = x;
@@ -535,17 +535,17 @@ namespace SimulateCollision
             mainCanvas.Children.Clear();
         }
 
-        private static readonly byte[][] ColorTable = new byte[][] {
-            new byte[] { 127, 127, 127 },
-            new byte[] { 163, 73, 164 },
-            new byte[] { 63, 72, 204 },
-            new byte[] { 0, 162, 232 },
-            new byte[] { 34, 177, 76 },
-            new byte[] { 255, 242, 0 },
-            new byte[] { 255, 127, 39 },
-            new byte[] { 237, 28, 36 },
-            new byte[] { 136, 0, 21 },
-            new byte[] { 0, 0, 0 }};
+        private static readonly byte[][] ColorTable = [
+            [127, 127, 127],
+            [163, 73, 164],
+            [63, 72, 204],
+            [0, 162, 232],
+            [34, 177, 76],
+            [255, 242, 0],
+            [255, 127, 39],
+            [237, 28, 36],
+            [136, 0, 21],
+            [0, 0, 0]];
 
         private static Color CreateColorByMass(double mass, double minMass, double maxMass)
         {
@@ -657,7 +657,7 @@ namespace SimulateCollision
 
             }
 
-            Array.Resize<Particle>(ref expectParticles, createdNumber);
+            Array.Resize(ref expectParticles, createdNumber);
             return expectParticles;
         }
 

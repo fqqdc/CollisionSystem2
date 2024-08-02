@@ -1,22 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace SimulateCollision
 {
     public class EventIndex
     {
-        public float Time { get; init; }
+        public Float Time { get; init; }
         public int IndexA { get; init; } = -1;
         public int IndexB { get; init; } = -1;
         public int CountA { get; init; } = -1;
         public int CountB { get; init; } = -1;
         public EventIndex() { Time = default; }
 
-        public static EventIndex CreateEvent(float t, int countA, int indexA, int countB, int indexB)
+        public static EventIndex CreateEvent(Float t, int countA, int indexA, int countB, int indexB)
         {
             Debug.Assert(t > 0);
 
@@ -24,7 +19,7 @@ namespace SimulateCollision
             return new EventIndex { Time = t, IndexA = indexA, CountA = countA, IndexB = indexB, CountB = countB };
         }
 
-        public static EventIndex CreateEventHitVertical(float t, int countA, int indexA)
+        public static EventIndex CreateEventHitVertical(Float t, int countA, int indexA)
         {
             Debug.Assert(t > 0);
 
@@ -32,7 +27,7 @@ namespace SimulateCollision
             return new EventIndex { Time = t, IndexA = indexA, CountA = countA };
         }
 
-        public static EventIndex CreateEventHitHorizontal(float t, int countB, int indexB)
+        public static EventIndex CreateEventHitHorizontal(Float t, int countB, int indexB)
         {
             Debug.Assert(t > 0);
 
@@ -40,7 +35,7 @@ namespace SimulateCollision
             return new EventIndex { Time = t, IndexB = indexB, CountB = countB };
         }
 
-        public static EventIndex CreateEventSnapshotAll(float t)
+        public static EventIndex CreateEventSnapshotAll(Float t)
         {
             Debug.Assert(t > 0);
 

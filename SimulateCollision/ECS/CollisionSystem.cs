@@ -1,46 +1,44 @@
-﻿using System;
-
-namespace SimulateCollision.ECS
+﻿namespace SimulateCollision.ECS
 {
     public class CollisionSystem : System
     {
-        public const float INFINITY = float.PositiveInfinity;
+        public const Float INFINITY = Float.PositiveInfinity;
 
         // 距离该粒子1和粒子2碰撞所需的时间
-        public float TimeToHit(in Particle p1, in Particle p2)
+        public Float TimeToHit(in Particle p1, in Particle p2)
         {
             var (rx1, ry1) = (p1.PositionX, p1.PositionY);
             var (rx2, ry2) = (p2.PositionX, p2.PositionY);
             var (vx1, vy1) = (p1.VelocityX, p1.VelocityY);
             var (vx2, vy2) = (p2.VelocityX, p2.VelocityY);
 
-            float dx = rx2 - rx1;
-            float dy = ry2 - ry1;
-            float dvx = vx2 - vx1;
-            float dvy = vy2 - vy1;
-            float dvdr = dx * dvx + dy * dvy;
+            Float dx = rx2 - rx1;
+            Float dy = ry2 - ry1;
+            Float dvx = vx2 - vx1;
+            Float dvy = vy2 - vy1;
+            Float dvdr = dx * dvx + dy * dvy;
             if (dvdr > 0)
             {
                 return INFINITY;
             }
-            float dvdv = dvx * dvx + dvy * dvy;
+            Float dvdv = dvx * dvx + dvy * dvy;
             if (dvdv == 0)
             {
                 return INFINITY;
             }
-            float drdr = dx * dx + dy * dy;
-            float sigma = p1.Radius + p2.Radius;
-            float d = (dvdr * dvdr) - dvdv * (drdr - sigma * sigma);
+            Float drdr = dx * dx + dy * dy;
+            Float sigma = p1.Radius + p2.Radius;
+            Float d = (dvdr * dvdr) - dvdv * (drdr - sigma * sigma);
             if (d < 0)
             {
                 return INFINITY;
             }
-            return -(dvdr + MathF.Sqrt(d)) / dvdv;
+            return -(dvdr + Float.Sqrt(d)) / dvdv;
         }
 
 
         // 距离该粒子和垂直墙体碰撞所需的时间
-        public float TimeToHitVerticalWall(in float px, in float vx, in float r, in float left, in float right)
+        public Float TimeToHitVerticalWall(in Float px, in Float vx, in Float r, in Float left, in Float right)
         {
             if (vx > 0)
             {
@@ -58,7 +56,7 @@ namespace SimulateCollision.ECS
 
 
         // 距离该粒子和水平墙体碰撞所需的时间
-        public float TimeToHitHorizontalWall(in float py, in float vy, in float r, float top, float bottom)
+        public Float TimeToHitHorizontalWall(in Float py, in Float vy, in Float r, Float top, Float bottom)
         {
             if (vy > 0)
             {
@@ -74,7 +72,7 @@ namespace SimulateCollision.ECS
             }
         }
 
-        public void UpdatePosition(ref Particle p, float dt)
+        public void UpdatePosition(ref Particle p, Float dt)
         {
             p.PositionX += p.VelocityX * dt;
             p.PositionY += p.VelocityY * dt;
@@ -89,17 +87,17 @@ namespace SimulateCollision.ECS
             var (p2x, p2y) = (p2.PositionX, p2.PositionY);
             var (v2x, v2y) = (p2.VelocityX, p2.VelocityY);
 
-            float dx = p2x - p1x;
-            float dy = p2y - p1y;
-            float dvx = v2x - v1x;
-            float dvy = v2y - v1y;
-            float dvdr = dx * dvx + dy * dvy;
-            float dist = p1.Radius + p2.Radius;
+            Float dx = p2x - p1x;
+            Float dy = p2y - p1y;
+            Float dvx = v2x - v1x;
+            Float dvy = v2y - v1y;
+            Float dvdr = dx * dvx + dy * dvy;
+            Float dist = p1.Radius + p2.Radius;
 
-            float magnitude = 2 * p1.Mass * p2.Mass * dvdr / ((p1.Mass + p2.Mass) * dist);
+            Float magnitude = 2 * p1.Mass * p2.Mass * dvdr / ((p1.Mass + p2.Mass) * dist);
 
-            float fx = magnitude * dx / dist;
-            float fy = magnitude * dy / dist;
+            Float fx = magnitude * dx / dist;
+            Float fy = magnitude * dy / dist;
 
             v1x += fx / p1.Mass;
             v1y += fy / p1.Mass;

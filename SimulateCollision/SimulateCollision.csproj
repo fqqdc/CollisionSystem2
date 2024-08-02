@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>SimulateCollision</AssemblyName>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -22,7 +23,6 @@
     <Compile Remove="CollisionSystem.cs" />
     <Compile Remove="CudaError.cs" />
     <Compile Remove="Event.cs" />
-    <Compile Remove="Particle.cs" />
     <Compile Remove="ParticleD.cs" />
   </ItemGroup>
 
@@ -41,6 +41,12 @@
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.Double">
+      <Alias>Float</Alias>
+    </Using>
   </ItemGroup>
 
 </Project>
