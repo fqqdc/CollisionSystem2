@@ -136,24 +136,24 @@ namespace SimulateCollision
             PriorityQueue<ParticleEvent, Float> groupQueue = new();
 
             ref Particle a = ref particles[indexA];
-            //for (int i = 0; i < particles.Length; i++)
-            //{
-            //    var dt = a.TimeToHit(ref particles[i]);
-            //    Debug.Assert(dt > 0);
-            //    if (dt != Particle.INFINITY)
-            //        groupQueue.Enqueue(ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
-            //}
-
-            var events = new (ParticleEvent, double)[particles.Length];
-            Parallel.For(0, particles.Length, new ParallelOptions() { MaxDegreeOfParallelism = 32 }, i =>
+            for (int i = 0; i < particles.Length; i++)
             {
-                ref Particle a = ref particles[indexA];
                 var dt = a.TimeToHit(ref particles[i]);
                 Debug.Assert(dt > 0);
                 if (dt != Particle.INFINITY)
-                    events[i] = (ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
-            });
-            groupQueue.EnqueueRange(events.Where(e => e.Item1 != null));
+                    groupQueue.Enqueue(ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
+            }
+
+            //var events = new (ParticleEvent, double)[particles.Length];
+            //Parallel.For(0, particles.Length, new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
+            //{
+            //    ref Particle a = ref particles[indexA];
+            //    var dt = a.TimeToHit(ref particles[i]);
+            //    Debug.Assert(dt > 0);
+            //    if (dt != Particle.INFINITY)
+            //        events[i] = (ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
+            //});
+            //groupQueue.EnqueueRange(events.Where(e => e.Item1 != null));
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
