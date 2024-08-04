@@ -158,7 +158,7 @@ namespace SimulateCollision
             }
 
             var time = groupQueue.Peek().Time;
-            globalQueue.EnqueueDequeue(groupQueue, time);
+            globalQueue.Enqueue(groupQueue, time);
         }
 
         public void SnapshotAll()
