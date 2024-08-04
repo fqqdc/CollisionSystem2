@@ -77,7 +77,7 @@ namespace SimulateCollision
                         break;
                     }
 
-                    if (!e.IsValid(particles)) 
+                    if (!e.IsValid(particles))
                         continue;
 
                     //* 处理事件 *//
@@ -132,16 +132,28 @@ namespace SimulateCollision
                 return;
             }
 
-            ref Particle a = ref particles[indexA];
-            PriorityQueue<ParticleEvent, Float> groupQueue = new ();
 
-            for (int i = 0; i < particles.Length; i++)
+            PriorityQueue<ParticleEvent, Float> groupQueue = new();
+
+            ref Particle a = ref particles[indexA];
+            //for (int i = 0; i < particles.Length; i++)
+            //{
+            //    var dt = a.TimeToHit(ref particles[i]);
+            //    Debug.Assert(dt > 0);
+            //    if (dt != Particle.INFINITY)
+            //        groupQueue.Enqueue(ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
+            //}
+
+            var events = new (ParticleEvent, double)[particles.Length];
+            Parallel.For(0, particles.Length, new ParallelOptions() { MaxDegreeOfParallelism = 32 }, i =>
             {
+                ref Particle a = ref particles[indexA];
                 var dt = a.TimeToHit(ref particles[i]);
                 Debug.Assert(dt > 0);
                 if (dt != Particle.INFINITY)
-                    groupQueue.Enqueue(ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
-            };
+                    events[i] = (ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
+            });
+            groupQueue.EnqueueRange(events.Where(e => e.Item1 != null));
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
@@ -169,7 +181,7 @@ namespace SimulateCollision
                 Pos2Rec(i, out var data, in particles[i]);
                 snapshot.Add(systemTime, data);
             }
-            
+
         }
 
         private void Pos2Rec(int i, out SnapshotData rec, in Particle particle)
