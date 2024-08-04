@@ -234,7 +234,6 @@ namespace SimulateCollision
             double panelHeight = mainPanel.ActualHeight;
 
             ICollisionCoreSystem coreSystem = new CollisionCoreSystemIndex(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
-            //ICollisionCoreSystem coreSystem = new ECS.CollisionCoreSystemECS(arrParticle.ToArray(), (float)panelWidth, (float)panelHeight);
 
             int n, max = 0, count = 0;
             Stopwatch sw = Stopwatch.StartNew();
