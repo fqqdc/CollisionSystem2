@@ -42,14 +42,14 @@ namespace SimulateCollision
             for (int i = 0; i < particles.Length; i++)
             {
                 ref var p = ref particles[i];
-                bw.Write(p.PosX);
-                bw.Write(p.PosY);
-                bw.Write(p.VecX);
-                bw.Write(p.VecY);
-                bw.Write(p.Radius);
+                bw.Write((double)p.PosX);
+                bw.Write((double)p.PosY);
+                bw.Write((double)p.VecX);
+                bw.Write((double)p.VecY);
                 Debug.Assert(p.Radius > 0);
-                bw.Write(p.Mass);
+                bw.Write((double)p.Radius);
                 Debug.Assert(p.Mass > 0);
+                bw.Write((double)p.Mass);
             }
 
             bw.Flush();
@@ -73,13 +73,13 @@ namespace SimulateCollision
                 arrParticle = new Particle[nParticles];
                 for (int i = 0; i < nParticles; i++)
                 {
-                    var rx = br.ReadSingle();
-                    var ry = br.ReadSingle();
-                    var vx = br.ReadSingle();
-                    var vy = br.ReadSingle();
-                    var radius = br.ReadSingle();
+                    var rx = (Float)br.ReadDouble();
+                    var ry = (Float)br.ReadDouble();
+                    var vx = (Float)br.ReadDouble();
+                    var vy = (Float)br.ReadDouble();
+                    var radius = (Float)br.ReadDouble();
                     Debug.Assert(radius > 0);
-                    var mass = br.ReadSingle();
+                    var mass = (Float)br.ReadDouble();
                     Debug.Assert(mass > 0);
 
                     arrParticle[i] = new(rx, ry, vx, vy, radius, mass);

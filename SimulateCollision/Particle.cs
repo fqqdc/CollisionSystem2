@@ -39,7 +39,7 @@ namespace SimulateCollision
          */
         public Float Mass { get; private set; }
 
-        public int Count { get; private set; }
+        public int Version { get; private set; }
 
         public Particle(Float rx, Float ry, Float vx, Float vy, Float radius, Float mass)
         {
@@ -51,7 +51,7 @@ namespace SimulateCollision
             this.Radius = radius;
             this.Mass = mass;
 
-            this.Count = 0;
+            this.Version = 0;
         }
 
         public void Move(Float dt)
@@ -220,8 +220,8 @@ namespace SimulateCollision
             that.vx = v2x;
             that.vy = v2y;
 
-            this.Count++;
-            that.Count++;
+            this.Version++;
+            that.Version++;
         }
 
         /**
@@ -230,7 +230,7 @@ namespace SimulateCollision
         public void BounceOffVerticalWall()
         {
             vx = -vx;
-            Count++;
+            Version++;
         }
 
         /**
@@ -239,7 +239,7 @@ namespace SimulateCollision
         public void BounceOffHorizontalWall()
         {
             vy = -vy;
-            Count++;
+            Version++;
         }
 
         /**

@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Transactions;
+﻿using System.Diagnostics;
 using System.Windows.Controls;
 
 namespace SimulateCollision
@@ -16,7 +8,8 @@ namespace SimulateCollision
         private readonly Particle[] particles;
         private readonly float height, width;
 
-        private PriorityQueue<EventIndex, Float> priorityQueue;
+        //private PriorityQueue<ParticleEvent, Float> priorityQueue;
+        private PriorityQueue<PriorityQueue<ParticleEvent, Float>, Float> globalQueue;
 
         private SystemSnapshot snapshot;
 
@@ -34,7 +27,7 @@ namespace SimulateCollision
         {
             get
             {
-                return priorityQueue.Count;
+                return globalQueue.Count;
             }
         }
 
@@ -45,7 +38,7 @@ namespace SimulateCollision
             this.width = width;
             this.height = height;
 
-            priorityQueue = new();
+            globalQueue = new();
             snapshot = new();
 
             Initialize();
@@ -53,7 +46,7 @@ namespace SimulateCollision
 
         private void Initialize()
         {
-            priorityQueue = new();
+            globalQueue = new();
             snapshot.Reset();
             systemTime = 0;
 
@@ -67,38 +60,55 @@ namespace SimulateCollision
 
         public Float NextStep()
         {
-            while (priorityQueue.Count != 0)
+            while (globalQueue.Count != 0)
             {
-                EventIndex e = priorityQueue.Dequeue();
-                if (!e.IsValid(particles)) continue;
+                var groupQueue = globalQueue.Dequeue();
+                var nextGroupTime = globalQueue.Peek().Peek().Time;
 
-                //* 处理事件 *//
-                var dt = e.Time - systemTime;
-                for (int i = 0; i < particles.Length; i++)
-                    particles[i].Move(dt);
-
-                systemTime = e.Time;
-
-                if (e.IndexA != -1 && e.IndexB != -1)
+                while (groupQueue.Count != 0)
                 {
-                    particles[e.IndexA].BounceOff(ref particles[e.IndexB]);
-                }
-                else if (e.IndexA != -1 && e.IndexB == -1)
-                {
-                    particles[e.IndexA].BounceOffVerticalWall();
-                }
-                else if (e.IndexA == -1 && e.IndexB != -1)
-                {
-                    particles[e.IndexB].BounceOffHorizontalWall();
-                }
+                    ParticleEvent e = groupQueue.Dequeue();
 
-                if (e.IndexA != -1)
-                    PredictCollisions(e.IndexA);
-                if (e.IndexB != -1)
-                    PredictCollisions(e.IndexB);
+                    var time = e.Time;
+                    if (time > nextGroupTime)
+                    {
+                        groupQueue.Enqueue(e, time);
+                        globalQueue.Enqueue(groupQueue, time);
+                        break;
+                    }
 
-                SnapshotParticle(e.IndexA, e.IndexB);
-                break;
+                    if (!e.IsValid(particles)) 
+                        continue;
+
+                    //* 处理事件 *//
+                    var dt = e.Time - systemTime;
+                    for (int i = 0; i < particles.Length; i++)
+                        particles[i].Move(dt);
+
+                    systemTime = e.Time;
+
+                    if (e.IndexA != -1 && e.IndexB != -1)
+                    {
+                        particles[e.IndexA].BounceOff(ref particles[e.IndexB]);
+                    }
+                    else if (e.IndexA != -1 && e.IndexB == -1)
+                    {
+                        particles[e.IndexA].BounceOffVerticalWall();
+                    }
+                    else if (e.IndexA == -1 && e.IndexB != -1)
+                    {
+                        particles[e.IndexB].BounceOffHorizontalWall();
+                    }
+
+                    if (e.IndexA != -1)
+                        PredictCollisions(e.IndexA);
+                    if (e.IndexB != -1)
+                        PredictCollisions(e.IndexB);
+
+                    SnapshotParticle(e.IndexA, e.IndexB);
+
+                    return systemTime;
+                }
             }
 
             return systemTime;
@@ -123,28 +133,32 @@ namespace SimulateCollision
             }
 
             ref Particle a = ref particles[indexA];
+            PriorityQueue<ParticleEvent, Float> groupQueue = new ();
 
             for (int i = 0; i < particles.Length; i++)
             {
                 var dt = a.TimeToHit(ref particles[i]);
                 Debug.Assert(dt > 0);
                 if (dt != Particle.INFINITY)
-                    priorityQueue.Enqueue(EventIndex.CreateEvent(systemTime + dt, a.Count, indexA, particles[i].Count, i), systemTime + dt);
+                    groupQueue.Enqueue(ParticleEvent.CreateEvent(systemTime + dt, a.Version, indexA, particles[i].Version, i), systemTime + dt);
             };
 
             {
                 var dtX = a.TimeToHitVerticalWall(0, this.width);
                 Debug.Assert(dtX > 0);
                 if (dtX != Particle.INFINITY)
-                    priorityQueue.Enqueue(EventIndex.CreateEventHitVertical(systemTime + dtX, a.Count, indexA), systemTime + dtX);
+                    groupQueue.Enqueue(ParticleEvent.CreateEventHitVertical(systemTime + dtX, a.Version, indexA), systemTime + dtX);
             }
 
             {
                 var dtY = a.TimeToHitHorizontalWall(0, this.height);
                 Debug.Assert(dtY > 0);
                 if (dtY != Particle.INFINITY)
-                    priorityQueue.Enqueue(EventIndex.CreateEventHitHorizontal(systemTime + dtY, a.Count, indexA), systemTime + dtY);
+                    groupQueue.Enqueue(ParticleEvent.CreateEventHitHorizontal(systemTime + dtY, a.Version, indexA), systemTime + dtY);
             }
+
+            var time = groupQueue.Peek().Time;
+            globalQueue.EnqueueDequeue(groupQueue, time);
         }
 
         public void SnapshotAll()
